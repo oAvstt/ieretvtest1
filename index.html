@@ -1,443 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=3840,height=2160,initial-scale=1,user-scalable=no">
-<title>IERE — Project Showcase</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&family=Playfair+Display:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<style>
-/* ═══════════════════════════════════════════════════════════════
-   IERE SHOWCASE — Premium Cinematic Display System
-   Designed for 4K (3840×2160) luxury lobby television
-   ═══════════════════════════════════════════════════════════════ */
-
-/* ─── RESET & BASE ─── */
-*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-html,body{
-  width:100%;height:100%;overflow:hidden;
-  background:#050505;
-  font-family:'Inter',system-ui,-apple-system,sans-serif;
-  color:#e8e8e8;
-  cursor:none;
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
-}
-/* Show cursor when admin panels are active */
-#admin-dashboard.active ~ *,#admin-dashboard.active,
-#login-modal.active ~ *,#login-modal.active,
-#project-form-modal.active ~ *,#project-form-modal.active{cursor:auto}
-#admin-dashboard.active *,#login-modal.active *,#project-form-modal.active *{cursor:auto}
-button,input,select,textarea,.toggle,.mode-option,.project-item{cursor:pointer!important}
-#logo-container{cursor:pointer!important}
-
-/* ─── CSS VARIABLES ─── */
-:root{
-  --bg-primary:#050505;--bg-secondary:#0B0B0B;--bg-tertiary:#121212;
-  --accent:#8B5CF6;--accent-dim:rgba(139,92,246,0.3);
-  --cyan:#06B6D4;--cyan-dim:rgba(6,182,212,0.2);
-  --text:#F5F5F5;--text2:rgba(245,245,245,0.6);--text3:rgba(245,245,245,0.3);
-  --glass:rgba(12,12,12,0.88);--glass-b:rgba(139,92,246,0.12);
-  --ease:cubic-bezier(0.22,1,0.36,1);
-}
-
-/* ─── SCENE ─── */
-#scene-container{position:fixed;inset:0;z-index:1}
-canvas{display:block}
-
-/* ─── UI ─── */
-#ui-layer{position:fixed;inset:0;z-index:10;pointer-events:none}
-#ui-layer>*{pointer-events:auto}
-
-/* ─── STARTUP ─── */
-#startup-overlay{
-  position:fixed;inset:0;z-index:1000;background:#050505;
-  display:flex;align-items:center;justify-content:center;flex-direction:column;
-}
-#startup-overlay .logo-startup{
-  width:240px;height:240px;object-fit:contain;opacity:0;
-  filter:drop-shadow(0 0 80px rgba(139,92,246,0.5));
-}
-#startup-overlay .tagline{
-  font-family:'Playfair Display',serif;font-size:16px;font-weight:300;
-  letter-spacing:10px;text-transform:uppercase;color:var(--text3);
-  opacity:0;margin-top:36px;
-}
-.startup-glow{
-  position:absolute;width:700px;height:700px;border-radius:50%;
-  background:radial-gradient(circle,rgba(139,92,246,0.06) 0%,transparent 70%);
-  opacity:0;pointer-events:none;
-}
-
-/* ─── LOGO (lower-right) ─── */
-#logo-container{
-  position:fixed;bottom:40px;right:40px;z-index:50;
-  cursor:pointer;pointer-events:auto;opacity:0;transition:opacity 1.5s;
-}
-#logo-container img,#logo-container svg{
-  width:100px;height:auto;opacity:0.4;
-  filter:drop-shadow(0 0 24px rgba(139,92,246,0.2));
-  transition:all 0.6s var(--ease);
-}
-#logo-container:hover img,#logo-container:hover svg{opacity:0.7;filter:drop-shadow(0 0 40px rgba(139,92,246,0.45))}
-#logo-container.glow img,#logo-container.glow svg{opacity:1;filter:drop-shadow(0 0 70px rgba(139,92,246,0.9));transition:all 0.15s}
-
-/* Logo upload zone in admin */
-.logo-upload-area{
-  display:flex;align-items:center;gap:16px;padding:14px;
-  background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);
-  border-radius:10px;
-}
-.logo-preview{
-  width:64px;height:64px;border-radius:8px;overflow:hidden;flex-shrink:0;
-  background:rgba(139,92,246,0.06);display:flex;align-items:center;justify-content:center;
-  border:1px solid rgba(139,92,246,0.12);
-}
-.logo-preview img{width:100%;height:100%;object-fit:contain}
-.logo-preview svg{width:32px;height:32px;opacity:0.3}
-.logo-info{flex:1;min-width:0}
-.logo-info .logo-status{font-size:11px;color:var(--text2);margin-bottom:4px}
-.logo-info .logo-hint{font-size:9px;color:var(--text3);letter-spacing:0.5px}
-.logo-actions{display:flex;gap:5px;flex-shrink:0}
-
-/* ─── MODE INDICATOR ─── */
-#mode-indicator{
-  position:fixed;top:36px;left:50%;transform:translateX(-50%);z-index:20;
-  font-size:10px;font-weight:500;letter-spacing:7px;text-transform:uppercase;
-  color:var(--text3);opacity:0;transition:opacity 1.5s;
-}
-
-/* ─── PROJECT CARD ─── */
-#project-card{
-  position:fixed;left:60px;bottom:80px;z-index:30;width:480px;
-  opacity:0;transform:translateY(24px) scale(0.98);
-  pointer-events:none;transition:all 0.9s var(--ease);
-}
-#project-card.active{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
-.card-glass{
-  background:var(--glass);backdrop-filter:blur(50px) saturate(1.6);
-  border:1px solid var(--glass-b);border-radius:14px;padding:36px;
-  position:relative;overflow:hidden;
-}
-.card-glass::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:1px;
-  background:linear-gradient(90deg,transparent 10%,rgba(139,92,246,0.35) 50%,transparent 90%);
-}
-.card-glass::after{
-  content:'';position:absolute;top:0;left:0;bottom:0;width:1px;
-  background:linear-gradient(180deg,rgba(139,92,246,0.25),transparent);
-}
-.card-category{font-size:9px;letter-spacing:5px;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:10px}
-.card-title{font-family:'Playfair Display',serif;font-size:28px;font-weight:400;color:var(--text);margin-bottom:6px;line-height:1.25}
-.card-location{font-size:11px;color:var(--text2);letter-spacing:2.5px;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:7px}
-.card-location::before{content:'';width:3px;height:3px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
-.card-description{font-size:13px;line-height:1.75;color:var(--text2);font-weight:300;max-height:100px;overflow:hidden}
-.card-date{font-size:10px;color:var(--text3);margin-top:14px;letter-spacing:3px}
-
-/* ─── MEDIA VIEWER ─── */
-#media-viewer{
-  position:fixed;right:60px;bottom:80px;z-index:30;
-  width:600px;height:380px;
-  opacity:0;transform:scale(0.94) translateY(10px);
-  transition:all 0.9s var(--ease);pointer-events:none;
-}
-#media-viewer.active{opacity:1;transform:scale(1) translateY(0);pointer-events:auto}
-.media-frame{
-  width:100%;height:100%;border-radius:14px;overflow:hidden;
-  background:#0a0a0a;border:1px solid var(--glass-b);
-  position:relative;
-  box-shadow:0 24px 80px rgba(0,0,0,0.6),0 0 40px rgba(139,92,246,0.08);
-}
-.media-frame img,.media-frame video{width:100%;height:100%;object-fit:cover;display:block}
-.media-counter{
-  position:absolute;bottom:14px;right:14px;
-  font-size:9px;letter-spacing:3px;color:var(--text3);
-  background:rgba(5,5,5,0.75);padding:5px 12px;border-radius:20px;
-  backdrop-filter:blur(10px);
-}
-
-/* ─── EMPTY STATE ─── */
-#empty-state{
-  position:fixed;inset:0;z-index:20;
-  display:flex;align-items:center;justify-content:center;flex-direction:column;
-  opacity:0;pointer-events:none;transition:opacity 1.2s;
-}
-#empty-state.active{opacity:1}
-#empty-state h2{
-  font-family:'Playfair Display',serif;font-size:38px;font-weight:300;
-  color:var(--text);margin-bottom:16px;letter-spacing:3px;
-}
-#empty-state p{font-size:12px;color:var(--text3);letter-spacing:5px;text-transform:uppercase;font-weight:300}
-
-/* ─── LOGIN MODAL ─── */
-#login-modal{
-  position:fixed;inset:0;z-index:200;
-  display:flex;align-items:center;justify-content:center;
-  opacity:0;pointer-events:none;transition:opacity 0.5s;
-}
-#login-modal.active{opacity:1;pointer-events:auto}
-#login-modal .backdrop{position:absolute;inset:0;background:rgba(5,5,5,0.85);backdrop-filter:blur(24px)}
-.login-box{
-  position:relative;width:380px;
-  background:var(--glass);backdrop-filter:blur(50px) saturate(1.6);
-  border:1px solid var(--glass-b);border-radius:18px;padding:44px;
-  text-align:center;z-index:1;
-  box-shadow:0 0 120px rgba(139,92,246,0.08);
-}
-.login-box h3{font-family:'Playfair Display',serif;font-size:22px;font-weight:400;margin-bottom:6px;color:var(--text)}
-.login-box .subtitle{font-size:9px;letter-spacing:5px;text-transform:uppercase;color:var(--text3);margin-bottom:28px}
-.login-box input{
-  width:100%;padding:13px 18px;
-  background:rgba(255,255,255,0.03);border:1px solid rgba(139,92,246,0.18);
-  border-radius:8px;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;
-  outline:none;transition:all 0.3s;letter-spacing:4px;text-align:center;
-}
-.login-box input:focus{border-color:var(--accent);box-shadow:0 0 30px rgba(139,92,246,0.12)}
-.login-box input::placeholder{color:var(--text3);letter-spacing:2px}
-.login-btn{
-  width:100%;padding:13px;
-  background:linear-gradient(135deg,#7C3AED,var(--accent));
-  border:none;border-radius:8px;color:white;font-size:10px;font-weight:600;
-  letter-spacing:5px;text-transform:uppercase;cursor:pointer;margin-top:14px;
-  transition:all 0.3s;font-family:'Inter',sans-serif;
-}
-.login-btn:hover{transform:translateY(-1px);box-shadow:0 12px 40px rgba(139,92,246,0.25)}
-.login-error{font-size:10px;color:#EF4444;margin-top:10px;opacity:0;transition:opacity 0.3s;letter-spacing:1px}
-.login-error.show{opacity:1}
-.login-close{
-  position:absolute;top:14px;right:14px;background:none;border:none;
-  color:var(--text3);font-size:16px;cursor:pointer;width:28px;height:28px;
-  display:flex;align-items:center;justify-content:center;border-radius:6px;transition:all 0.3s;
-}
-.login-close:hover{background:rgba(255,255,255,0.04);color:var(--text2)}
-
-/* ─── ADMIN DASHBOARD ─── */
-#admin-dashboard{position:fixed;inset:0;z-index:150;opacity:0;pointer-events:none;transition:opacity 0.5s}
-#admin-dashboard.active{opacity:1;pointer-events:auto}
-#admin-dashboard .admin-backdrop{position:absolute;inset:0;background:rgba(5,5,5,0.8);backdrop-filter:blur(24px)}
-.admin-panel{
-  position:absolute;top:30px;right:30px;bottom:30px;width:660px;
-  background:var(--glass);backdrop-filter:blur(50px) saturate(1.6);
-  border:1px solid var(--glass-b);border-radius:18px;overflow:hidden;
-  display:flex;flex-direction:column;z-index:1;
-  box-shadow:-20px 0 100px rgba(0,0,0,0.4),0 0 80px rgba(139,92,246,0.04);
-}
-.admin-header{
-  padding:20px 28px;border-bottom:1px solid rgba(139,92,246,0.08);
-  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
-}
-.admin-header h3{font-family:'Playfair Display',serif;font-size:18px;font-weight:400}
-.admin-header-actions{display:flex;gap:6px}
-.admin-body{flex:1;overflow-y:auto;padding:20px 28px;scrollbar-width:thin;scrollbar-color:rgba(139,92,246,0.25) transparent}
-.admin-body::-webkit-scrollbar{width:3px}
-.admin-body::-webkit-scrollbar-thumb{background:rgba(139,92,246,0.25);border-radius:2px}
-
-.admin-section{margin-bottom:22px}
-.admin-section-title{font-size:9px;letter-spacing:5px;text-transform:uppercase;color:var(--accent);margin-bottom:10px;font-weight:600}
-.admin-btn{
-  padding:8px 16px;background:rgba(139,92,246,0.1);
-  border:1px solid rgba(139,92,246,0.2);border-radius:7px;
-  color:var(--text);font-size:11px;font-weight:500;cursor:pointer;
-  transition:all 0.3s;font-family:'Inter',sans-serif;letter-spacing:1px;
-}
-.admin-btn:hover{background:rgba(139,92,246,0.2);border-color:rgba(139,92,246,0.35)}
-.admin-btn.primary{background:linear-gradient(135deg,#7C3AED,var(--accent));border-color:transparent}
-.admin-btn.primary:hover{box-shadow:0 8px 30px rgba(139,92,246,0.25)}
-.admin-btn.danger{background:rgba(239,68,68,0.1);border-color:rgba(239,68,68,0.2);color:#EF4444}
-.admin-btn.danger:hover{background:rgba(239,68,68,0.2)}
-.admin-btn-row{display:flex;gap:6px;flex-wrap:wrap}
-
-.mode-selector{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.mode-option{
-  padding:10px 14px;background:rgba(255,255,255,0.02);
-  border:1px solid rgba(255,255,255,0.05);border-radius:8px;
-  cursor:pointer;transition:all 0.3s;text-align:center;
-}
-.mode-option:hover{border-color:rgba(139,92,246,0.25);background:rgba(139,92,246,0.04)}
-.mode-option.active{border-color:var(--accent);background:rgba(139,92,246,0.08)}
-.mode-option .mode-name{font-size:11px;font-weight:500;margin-bottom:1px}
-.mode-option .mode-desc{font-size:9px;color:var(--text3)}
-
-.setting-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
-.setting-label{font-size:11px;color:var(--text2)}
-.setting-val{font-size:10px;color:var(--accent);min-width:30px;text-align:right;margin-left:8px}
-.setting-control{display:flex;align-items:center;gap:6px}
-.setting-control input[type=range]{width:110px;accent-color:var(--accent);background:transparent;cursor:pointer}
-
-.project-list{display:flex;flex-direction:column;gap:6px}
-.project-item{
-  display:flex;align-items:center;gap:10px;padding:12px 14px;
-  background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.04);
-  border-radius:8px;transition:all 0.3s;
-}
-.project-item:hover{border-color:rgba(139,92,246,0.2);background:rgba(139,92,246,0.04)}
-.proj-thumb{
-  width:44px;height:44px;border-radius:6px;background:rgba(139,92,246,0.08);
-  overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:16px;
-}
-.proj-thumb img{width:100%;height:100%;object-fit:cover}
-.proj-info{flex:1;min-width:0}
-.proj-name{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.proj-loc{font-size:9px;color:var(--text3);letter-spacing:1px;margin-top:1px}
-.proj-actions{display:flex;gap:3px;flex-shrink:0}
-.proj-action-btn{
-  width:26px;height:26px;border-radius:5px;border:1px solid rgba(255,255,255,0.06);
-  background:rgba(255,255,255,0.02);color:var(--text2);font-size:11px;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;
-}
-.proj-action-btn:hover{border-color:rgba(139,92,246,0.25);background:rgba(139,92,246,0.08)}
-.proj-action-btn.del:hover{border-color:rgba(239,68,68,0.25);background:rgba(239,68,68,0.08);color:#EF4444}
-
-/* ─── PROJECT FORM ─── */
-#project-form-modal{
-  position:fixed;inset:0;z-index:250;display:flex;align-items:center;justify-content:center;
-  opacity:0;pointer-events:none;transition:opacity 0.4s;
-}
-#project-form-modal.active{opacity:1;pointer-events:auto}
-#project-form-modal .form-backdrop{position:absolute;inset:0;background:rgba(5,5,5,0.92);backdrop-filter:blur(16px)}
-.form-panel{
-  position:relative;width:560px;max-height:82vh;
-  background:var(--bg-secondary);border:1px solid var(--glass-b);border-radius:18px;
-  overflow-y:auto;z-index:1;scrollbar-width:thin;scrollbar-color:rgba(139,92,246,0.25) transparent;
-}
-.form-panel::-webkit-scrollbar{width:3px}
-.form-panel::-webkit-scrollbar-thumb{background:rgba(139,92,246,0.25);border-radius:2px}
-.form-header{
-  padding:24px 28px;border-bottom:1px solid rgba(139,92,246,0.08);
-  display:flex;align-items:center;justify-content:space-between;
-  position:sticky;top:0;background:var(--bg-secondary);z-index:2;
-}
-.form-header h3{font-family:'Playfair Display',serif;font-size:18px;font-weight:400}
-.form-body{padding:24px 28px}
-.form-group{margin-bottom:18px}
-.form-group label{display:block;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--text3);margin-bottom:6px;font-weight:600}
-.form-group input,.form-group textarea,.form-group select{
-  width:100%;padding:10px 14px;background:rgba(255,255,255,0.03);
-  border:1px solid rgba(255,255,255,0.06);border-radius:7px;
-  color:var(--text);font-size:12px;font-family:'Inter',sans-serif;outline:none;transition:all 0.3s;resize:vertical;
-}
-.form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:var(--accent);box-shadow:0 0 16px rgba(139,92,246,0.08)}
-.form-group textarea{min-height:70px}
-.form-group select option{background:#1a1a1a;color:#e8e8e8}
-
-.location-picker{display:flex;gap:6px}
-.location-picker input{flex:1}
-.pick-loc-btn{
-  padding:0 14px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.25);
-  border-radius:7px;color:var(--accent);font-size:16px;cursor:pointer;transition:all 0.3s;flex-shrink:0;
-}
-.pick-loc-btn:hover{background:rgba(139,92,246,0.2)}
-
-.drop-zone{
-  border:2px dashed rgba(139,92,246,0.15);border-radius:10px;
-  padding:32px 16px;text-align:center;cursor:pointer;transition:all 0.3s;position:relative;
-}
-.drop-zone:hover,.drop-zone.dragover{border-color:var(--accent);background:rgba(139,92,246,0.04)}
-.drop-zone .dz-icon{font-size:28px;margin-bottom:6px;opacity:0.35}
-.drop-zone .dz-text{font-size:11px;color:var(--text3);letter-spacing:1px}
-.drop-zone .dz-hint{font-size:9px;color:var(--text3);opacity:0.4;margin-top:3px}
-.drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer}
-
-.media-thumbs{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
-.media-thumb{
-  width:64px;height:64px;border-radius:6px;overflow:hidden;position:relative;
-  border:1px solid rgba(255,255,255,0.05);
-}
-.media-thumb img,.media-thumb video{width:100%;height:100%;object-fit:cover}
-.media-thumb .remove-media{
-  position:absolute;top:2px;right:2px;width:16px;height:16px;border-radius:50%;
-  background:rgba(239,68,68,0.85);border:none;color:white;font-size:9px;
-  cursor:pointer;display:flex;align-items:center;justify-content:center;
-  opacity:0;transition:opacity 0.2s;
-}
-.media-thumb:hover .remove-media{opacity:1}
-.media-thumb.is-video::after{
-  content:'▶';position:absolute;bottom:3px;left:3px;font-size:8px;
-  color:white;background:rgba(0,0,0,0.6);padding:1px 4px;border-radius:2px;
-}
-
-.form-footer{
-  padding:16px 28px;border-top:1px solid rgba(139,92,246,0.08);
-  display:flex;justify-content:flex-end;gap:6px;
-  position:sticky;bottom:0;background:var(--bg-secondary);
-}
-
-/* ─── SEARCH ─── */
-.search-bar{margin-bottom:12px}
-.search-bar input{
-  width:100%;padding:9px 14px 9px 32px;background:rgba(255,255,255,0.03);
-  border:1px solid rgba(255,255,255,0.06);border-radius:7px;
-  color:var(--text);font-size:11px;font-family:'Inter',sans-serif;outline:none;transition:all 0.3s;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='rgba(245,245,245,0.25)' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E");
-  background-repeat:no-repeat;background-position:10px center;
-}
-.search-bar input:focus{border-color:var(--accent);box-shadow:0 0 16px rgba(139,92,246,0.08)}
-
-/* ─── LOCATION PICK MODE ─── */
-#pick-mode-overlay{position:fixed;inset:0;z-index:300;cursor:crosshair;display:none;background:rgba(5,5,5,0.2)}
-#pick-mode-overlay.active{display:block}
-#pick-mode-hint{
-  position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:301;
-  font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--accent);
-  background:var(--glass);backdrop-filter:blur(20px);padding:10px 20px;
-  border-radius:8px;border:1px solid var(--glass-b);display:none;
-}
-#pick-mode-hint.active{display:block}
-
-/* ─── TOGGLE ─── */
-.toggle{
-  width:36px;height:20px;background:rgba(255,255,255,0.08);border-radius:10px;
-  position:relative;cursor:pointer;transition:background 0.3s;border:1px solid rgba(255,255,255,0.06);
-}
-.toggle.on{background:rgba(139,92,246,0.35);border-color:rgba(139,92,246,0.5)}
-.toggle::after{
-  content:'';width:14px;height:14px;background:white;border-radius:50%;
-  position:absolute;top:2px;left:2px;transition:transform 0.3s;
-}
-.toggle.on::after{transform:translateX(16px)}
-
-/* ─── NOTIFICATION ─── */
-#notification{
-  position:fixed;top:26px;right:26px;z-index:500;
-  padding:12px 20px;background:var(--glass);backdrop-filter:blur(20px);
-  border:1px solid var(--glass-b);border-radius:8px;font-size:11px;
-  letter-spacing:1px;color:var(--text);opacity:0;transform:translateY(-8px);
-  transition:all 0.4s var(--ease);pointer-events:none;
-}
-#notification.show{opacity:1;transform:translateY(0)}
-
-/* ─── AMBIENT VIGNETTE ─── */
-#vignette{
-  position:fixed;inset:0;z-index:3;pointer-events:none;
-  background:radial-gradient(ellipse 70% 70% at 50% 50%,transparent 50%,rgba(5,5,5,0.6) 100%);
-}
-
-/* ─── LIGHT SWEEP ─── */
-#light-sweep{
-  position:fixed;inset:0;z-index:2;pointer-events:none;
-  background:radial-gradient(ellipse 600px 300px at var(--lx,50%) var(--ly,50%),rgba(139,92,246,0.025),transparent);
-}
-
-/* ─── SCAN RING ─── */
-@keyframes scanPulse{
-  0%{r:4;opacity:0.7;stroke-width:1.5}
-  100%{r:60;opacity:0;stroke-width:0.3}
-}
-
-/* ─── SCROLLBAR ─── */
-::-webkit-scrollbar{width:3px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(139,92,246,0.2);border-radius:2px}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>IERE — Project Showcase</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&family=Playfair+Display:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
-<!-- ═══ STARTUP ═══ -->
+<!-- ═══ STARTUP OVERLAY ═══ -->
 <div id="startup-overlay">
   <div class="startup-glow"></div>
-  <img class="logo-startup" id="startup-logo" src="iere-logo.png" alt="" onerror="this.onerror=null;this.style.display='none';document.getElementById('startup-logo-placeholder').style.display='flex';">
-  <svg id="startup-logo-placeholder" style="display:none;width:160px;height:160px;opacity:0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <img class="logo-startup" id="startup-logo" src="iere-logo.png" alt="" 
+       onerror="this.onerror=null;this.style.display='none';document.getElementById('startup-logo-placeholder').style.display='flex';">
+  <svg id="startup-logo-placeholder" style="display:none;width:140px;height:140px;opacity:0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect x="10" y="10" width="80" height="80" rx="12" stroke="#8B5CF6" stroke-width="1" opacity="0.4"/>
     <path d="M50 28L62 44H38L50 28Z" stroke="#8B5CF6" stroke-width="1" opacity="0.5"/>
     <circle cx="50" cy="58" r="10" stroke="#8B5CF6" stroke-width="1" opacity="0.4"/>
@@ -446,25 +25,26 @@ canvas{display:block}
   <div class="tagline">Building Trinidad & Tobago</div>
 </div>
 
-<!-- ═══ VIGNETTE & LIGHT ═══ -->
+<!-- ═══ AMBIENT EFFECTS ═══ -->
 <div id="vignette"></div>
 <div id="light-sweep"></div>
 
-<!-- ═══ 3D SCENE ═══ -->
+<!-- ═══ THREE.JS SCENE ═══ -->
 <div id="scene-container"></div>
-
-<!-- ═══ SVG OVERLAY for 2D pins/lines ═══ -->
-<svg id="svg-overlay" style="position:fixed;inset:0;z-index:5;pointer-events:none;width:100%;height:100%" preserveAspectRatio="none"></svg>
 
 <!-- ═══ UI LAYER ═══ -->
 <div id="ui-layer">
-  <div id="mode-indicator">Portfolio Tour</div>
+  
+  <!-- Empty State -->
   <div id="empty-state">
     <h2>No Projects Added</h2>
     <p>Triple-click logo to open Admin Panel</p>
   </div>
+
+  <!-- Project Card -->
   <div id="project-card">
     <div class="card-glass">
+      <button class="card-close" onclick="APP.closeCard()">✕</button>
       <div class="card-category" id="card-category"></div>
       <div class="card-title" id="card-title"></div>
       <div class="card-location" id="card-location"></div>
@@ -472,6 +52,8 @@ canvas{display:block}
       <div class="card-date" id="card-date"></div>
     </div>
   </div>
+
+  <!-- Media Viewer -->
   <div id="media-viewer">
     <div class="media-frame">
       <img id="media-img" style="display:none" alt="">
@@ -479,20 +61,22 @@ canvas{display:block}
       <div class="media-counter" id="media-counter"></div>
     </div>
   </div>
+
 </div>
 
-<!-- ═══ LOGO ═══ -->
+<!-- ═══ LOGO (lower-right corner) ═══ -->
 <div id="logo-container">
-  <img id="corner-logo-img" src="iere-logo.png" alt="" onerror="this.onerror=null;this.style.display='none';document.getElementById('corner-logo-placeholder').style.display='block';">
-  <svg id="corner-logo-placeholder" style="display:none;width:100px;height:60px" viewBox="0 0 100 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <img id="corner-logo-img" src="iere-logo.png" alt="" 
+       onerror="this.onerror=null;this.style.display='none';document.getElementById('corner-logo-placeholder').style.display='block';">
+  <svg id="corner-logo-placeholder" style="display:none;width:80px;height:50px" viewBox="0 0 100 60" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect x="2" y="2" width="96" height="56" rx="8" stroke="#8B5CF6" stroke-width="0.8" opacity="0.3"/>
-    <path d="M50 14L60 28H40L50 14Z" stroke="#8B5CF6" stroke-width="0.8" opacity="0.35"/>
-    <circle cx="50" cy="36" r="7" stroke="#8B5CF6" stroke-width="0.8" opacity="0.3"/>
-    <text x="50" y="52" text-anchor="middle" fill="#8B5CF6" font-family="Inter,sans-serif" font-size="5.5" letter-spacing="2" opacity="0.35">IERE</text>
+    <path d="M50 12L58 24H42L50 12Z" stroke="#8B5CF6" stroke-width="0.8" opacity="0.35"/>
+    <circle cx="50" cy="32" r="6" stroke="#8B5CF6" stroke-width="0.8" opacity="0.3"/>
+    <text x="50" y="48" text-anchor="middle" fill="#8B5CF6" font-family="Inter,sans-serif" font-size="5" letter-spacing="1.5" opacity="0.35">IERE</text>
   </svg>
 </div>
 
-<!-- ═══ LOGIN ═══ -->
+<!-- ═══ LOGIN MODAL ═══ -->
 <div id="login-modal">
   <div class="backdrop" onclick="APP.closeLogin()"></div>
   <div class="login-box">
@@ -505,7 +89,7 @@ canvas{display:block}
   </div>
 </div>
 
-<!-- ═══ ADMIN ═══ -->
+<!-- ═══ ADMIN DASHBOARD ═══ -->
 <div id="admin-dashboard">
   <div class="admin-backdrop" onclick="APP.closeAdmin()"></div>
   <div class="admin-panel">
@@ -518,19 +102,21 @@ canvas{display:block}
       </div>
     </div>
     <div class="admin-body" id="admin-body">
-      <div class="admin-section">
-        <div class="admin-section-title">Display Mode</div>
-        <div class="mode-selector" id="mode-selector"></div>
-      </div>
+      
+      <!-- Company Logo -->
       <div class="admin-section">
         <div class="admin-section-title">Company Logo</div>
         <div class="logo-upload-area">
           <div class="logo-preview" id="admin-logo-preview">
-            <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="10" width="80" height="80" rx="12" stroke="#8B5CF6" stroke-width="1.5" opacity="0.3"/><path d="M50 30L60 45H40L50 30Z" stroke="#8B5CF6" stroke-width="1.5" opacity="0.35"/><circle cx="50" cy="60" r="9" stroke="#8B5CF6" stroke-width="1.5" opacity="0.3"/></svg>
+            <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="10" y="10" width="80" height="80" rx="12" stroke="#8B5CF6" stroke-width="1.5" opacity="0.3"/>
+              <path d="M50 30L60 45H40L50 30Z" stroke="#8B5CF6" stroke-width="1.5" opacity="0.35"/>
+              <circle cx="50" cy="60" r="9" stroke="#8B5CF6" stroke-width="1.5" opacity="0.3"/>
+            </svg>
           </div>
           <div class="logo-info">
             <div class="logo-status" id="logo-status">No logo uploaded</div>
-            <div class="logo-hint">PNG or WEBP recommended · Transparent background</div>
+            <div class="logo-hint">PNG or WEBP recommended</div>
           </div>
           <div class="logo-actions">
             <button class="admin-btn primary" onclick="APP.uploadLogo()">Upload</button>
@@ -539,6 +125,14 @@ canvas{display:block}
         </div>
         <input type="file" id="logo-file-input" accept="image/png,image/webp,image/jpeg,image/svg+xml" style="display:none">
       </div>
+
+      <!-- Display Mode -->
+      <div class="admin-section">
+        <div class="admin-section-title">Display Mode</div>
+        <div class="mode-selector" id="mode-selector"></div>
+      </div>
+
+      <!-- Settings -->
       <div class="admin-section">
         <div class="admin-section-title">Settings</div>
         <div class="setting-row">
@@ -563,19 +157,24 @@ canvas{display:block}
           </div>
         </div>
       </div>
+
+      <!-- Projects -->
       <div class="admin-section">
         <div class="admin-section-title">Projects</div>
         <div class="admin-btn-row" style="margin-bottom:10px">
           <button class="admin-btn primary" onclick="APP.openForm()">＋ Add Project</button>
         </div>
-        <div class="search-bar"><input type="text" placeholder="Search projects..." id="proj-search" oninput="APP.filterList(this.value)"></div>
+        <div class="search-bar">
+          <input type="text" placeholder="Search projects..." id="proj-search" oninput="APP.filterList(this.value)">
+        </div>
         <div class="project-list" id="proj-list"></div>
       </div>
+
     </div>
   </div>
 </div>
 
-<!-- ═══ PROJECT FORM ═══ -->
+<!-- ═══ PROJECT FORM MODAL ═══ -->
 <div id="project-form-modal">
   <div class="form-backdrop" onclick="APP.closeForm()"></div>
   <div class="form-panel">
@@ -584,8 +183,12 @@ canvas{display:block}
       <button class="admin-btn" onclick="APP.closeForm()">✕</button>
     </div>
     <div class="form-body">
-      <div class="form-group"><label>Project Name</label><input type="text" id="f-name" placeholder="Enter project name"></div>
-      <div class="form-group"><label>Category</label>
+      <div class="form-group">
+        <label>Project Name</label>
+        <input type="text" id="f-name" placeholder="Enter project name">
+      </div>
+      <div class="form-group">
+        <label>Category</label>
         <select id="f-category">
           <option value="Commercial">Commercial</option>
           <option value="Residential">Residential</option>
@@ -597,20 +200,34 @@ canvas{display:block}
           <option value="Other">Other</option>
         </select>
       </div>
-      <div class="form-group"><label>Location Name</label><input type="text" id="f-location" placeholder="e.g. Port of Spain"></div>
-      <div class="form-group"><label>Map Position</label>
+      <div class="form-group">
+        <label>Location Name</label>
+        <input type="text" id="f-location" placeholder="e.g. Port of Spain">
+      </div>
+      <div class="form-group">
+        <label>Map Position</label>
         <div class="location-picker">
           <input type="text" id="f-coords" placeholder="Click ⊕ to pick on map" readonly>
           <button class="pick-loc-btn" onclick="APP.startPick()" title="Pick on map">⊕</button>
         </div>
       </div>
-      <div class="form-group"><label>Description</label><textarea id="f-desc" placeholder="Describe the project..."></textarea></div>
-      <div class="form-group"><label>Completion Date</label><input type="month" id="f-date"></div>
-      <div class="form-group"><label>Enabled</label><div class="toggle on" id="f-enabled" onclick="this.classList.toggle('on')"></div></div>
-      <div class="form-group"><label>Media (Images & Videos)</label>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="f-desc" placeholder="Describe the project..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Completion Date</label>
+        <input type="month" id="f-date">
+      </div>
+      <div class="form-group">
+        <label>Enabled</label>
+        <div class="toggle on" id="f-enabled" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="form-group">
+        <label>Media (Images & Videos)</label>
         <div class="drop-zone" id="drop-zone">
           <div class="dz-icon">⬆</div>
-          <div class="dz-text">Drop files here or click to browse</div>
+          <div class="dz-text">Drop files or click to browse</div>
           <div class="dz-hint">JPG · PNG · WEBP · MP4 · WEBM · MOV</div>
           <input type="file" id="media-input" multiple accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime">
         </div>
@@ -624,928 +241,17 @@ canvas{display:block}
   </div>
 </div>
 
-<!-- ═══ LOCATION PICK ═══ -->
+<!-- ═══ LOCATION PICK MODE ═══ -->
 <div id="pick-mode-overlay" onclick="APP.doPick(event)"></div>
-<div id="pick-mode-hint">Click on the map to set location — ESC to cancel</div>
+<div id="pick-mode-hint">Click on map to set location — ESC to cancel</div>
 
 <!-- ═══ NOTIFICATION ═══ -->
 <div id="notification"></div>
 
-<!-- ═══ LIBRARIES ═══ -->
+<!-- ═══ SCRIPTS ═══ -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="js/app.js"></script>
 
-<script>
-/* ═══════════════════════════════════════════════════════════════════════
- *  IERE SHOWCASE ENGINE
- *  Premium cinematic display for 4K lobby television
- *  Single-file, zero-backend, IndexedDB-powered
- * ═══════════════════════════════════════════════════════════════════════ */
-const APP = (() => {
-'use strict';
-
-// ──────────────────────────────────────────────────
-// CONSTANTS
-// ──────────────────────────────────────────────────
-const PW = 'iere4373';
-const DB = 'IEREShowcaseDB';
-const MODES = [
-  {id:'portfolio',  name:'Portfolio Tour',   desc:'Auto-cycling showcase'},
-  {id:'ambient',    name:'Ambient Mode',     desc:'Elegant screensaver'},
-  {id:'headquarters',name:'Headquarters',    desc:'Operations center'},
-  {id:'timeline',   name:'Timeline',         desc:'Chronological growth'},
-  {id:'showcase',   name:'Client Showcase',  desc:'Visitor presentation'},
-  {id:'night',      name:'Night Mode',       desc:'After-hours display'},
-];
-const MAP_S = 14; // scene-units width of map
-
-// Detailed Trinidad outline (normalized 0-1, clockwise)
-const TT = [
-  [0.103,0.413],[0.098,0.430],[0.088,0.453],[0.083,0.475],[0.078,0.500],
-  [0.076,0.528],[0.075,0.555],[0.077,0.580],[0.080,0.602],[0.085,0.625],
-  [0.090,0.648],[0.096,0.670],[0.103,0.690],[0.110,0.710],[0.118,0.728],
-  [0.128,0.748],[0.140,0.768],[0.152,0.786],[0.165,0.803],[0.180,0.818],
-  [0.197,0.832],[0.215,0.845],[0.233,0.857],[0.252,0.868],[0.272,0.878],
-  [0.293,0.887],[0.315,0.895],[0.338,0.902],[0.362,0.907],[0.387,0.911],
-  [0.412,0.913],[0.438,0.913],[0.463,0.911],[0.488,0.907],[0.510,0.901],
-  [0.530,0.893],[0.548,0.883],[0.565,0.871],[0.580,0.857],[0.594,0.841],
-  [0.606,0.823],[0.617,0.803],[0.626,0.782],[0.634,0.760],[0.640,0.737],
-  [0.645,0.713],[0.648,0.688],[0.650,0.662],[0.651,0.636],[0.650,0.610],
-  [0.647,0.584],[0.643,0.558],[0.637,0.533],[0.630,0.510],[0.621,0.488],
-  [0.610,0.468],[0.597,0.450],[0.582,0.435],[0.565,0.423],[0.546,0.413],
-  [0.526,0.406],[0.505,0.400],[0.483,0.396],[0.460,0.393],[0.437,0.391],
-  [0.413,0.390],[0.390,0.390],[0.367,0.391],[0.343,0.393],[0.320,0.396],
-  [0.297,0.399],[0.275,0.403],[0.253,0.406],[0.232,0.408],[0.212,0.409],
-  [0.192,0.410],[0.172,0.410],[0.153,0.410],[0.133,0.410],[0.118,0.411],
-  [0.103,0.413]
-];
-
-// Tobago outline
-const TB = [
-  [0.710,0.175],[0.725,0.160],[0.742,0.148],[0.760,0.138],[0.780,0.130],
-  [0.800,0.125],[0.820,0.122],[0.840,0.122],[0.858,0.124],[0.875,0.130],
-  [0.890,0.138],[0.903,0.148],[0.914,0.160],[0.922,0.174],[0.926,0.188],
-  [0.927,0.202],[0.924,0.216],[0.918,0.228],[0.908,0.238],[0.895,0.246],
-  [0.880,0.252],[0.863,0.255],[0.845,0.256],[0.826,0.255],[0.808,0.252],
-  [0.790,0.247],[0.773,0.241],[0.757,0.233],[0.742,0.224],[0.728,0.213],
-  [0.718,0.200],[0.712,0.188],[0.710,0.175]
-];
-
-// Known locations (normalized)
-const LOCS = {
-  'Port of Spain':[0.185,0.420],'San Fernando':[0.310,0.810],'Chaguanas':[0.325,0.600],
-  'Arima':[0.420,0.440],'Point Fortin':[0.178,0.860],'Scarborough':[0.830,0.195],
-  'Couva':[0.300,0.555],'Tunapuna':[0.375,0.435],'Sangre Grande':[0.545,0.495],
-  'Princes Town':[0.400,0.800],'Diego Martin':[0.155,0.440],'Marabella':[0.305,0.780],
-  'Siparia':[0.280,0.870],'Rio Claro':[0.478,0.720],'Debe':[0.335,0.825],
-  'Fyzabad':[0.252,0.840],'La Brea':[0.200,0.865],'Point Lisas':[0.305,0.620],
-  'Tobago':[0.850,0.190],'Penal':[0.300,0.845],'Piarco':[0.400,0.455],
-  'Westmoorings':[0.155,0.425],'Maraval':[0.178,0.430],'St Augustine':[0.360,0.440],
-};
-
-// ──────────────────────────────────────────────────
-// STATE
-// ──────────────────────────────────────────────────
-let db, projects=[], settings={mode:'portfolio',transitionSpeed:3,displayDuration:15,particleDensity:40};
-let scene,camera,renderer,clock,mapGrp,pinMeshes={},particleSys,animId;
-let camTarget={x:0,y:1.5,z:20}, camLook={x:0,y:-0.5,z:0};
-let isAdmin=false, editId=null, pendingMedia=[], existingMedia=[];
-let tourTimer=null, mediaTimer=null, startupDone=false, picking=false;
-let searchQ='', projIdx=-1, mediaIdx=0, hqObjs=[];
-
-// ──────────────────────────────────────────────────
-// DATABASE
-// ──────────────────────────────────────────────────
-const openDB = () => new Promise((ok,no) => {
-  const r = indexedDB.open(DB, 2);
-  r.onupgradeneeded = e => {
-    const d = e.target.result;
-    if(!d.objectStoreNames.contains('projects')) d.createObjectStore('projects',{keyPath:'id'});
-    if(!d.objectStoreNames.contains('media')) d.createObjectStore('media',{keyPath:'id'});
-    if(!d.objectStoreNames.contains('backups')) d.createObjectStore('backups',{keyPath:'ts'});
-  };
-  r.onsuccess = e => { db = e.target.result; ok(db); };
-  r.onerror = e => no(e.target.error);
-});
-const tx = (s,m='readonly') => db.transaction(s,m).objectStore(s);
-const put = (s,d) => new Promise((ok,no) => { const r=tx(s,'readwrite').put(d); r.onsuccess=()=>ok(r.result); r.onerror=()=>no(r.error); });
-const get = (s,k) => new Promise((ok,no) => { const r=tx(s).get(k); r.onsuccess=()=>ok(r.result); r.onerror=()=>no(r.error); });
-const getAll = s => new Promise((ok,no) => { const r=tx(s).getAll(); r.onsuccess=()=>ok(r.result); r.onerror=()=>no(r.error); });
-const del = (s,k) => new Promise((ok,no) => { const r=tx(s,'readwrite').delete(k); r.onsuccess=()=>ok(); r.onerror=()=>no(r.error); });
-
-// ──────────────────────────────────────────────────
-// SETTINGS
-// ──────────────────────────────────────────────────
-function loadSettings(){
-  try { const s=localStorage.getItem('iere_s'); if(s) Object.assign(settings,JSON.parse(s)); } catch(e){}
-  syncSettingsUI();
-}
-function saveSettings(){ try { localStorage.setItem('iere_s',JSON.stringify(settings)); } catch(e){} }
-function syncSettingsUI(){
-  const el=(id)=>document.getElementById(id);
-  if(el('s-transition')){el('s-transition').value=settings.transitionSpeed;el('sv-transition').textContent=settings.transitionSpeed+'s';}
-  if(el('s-duration')){el('s-duration').value=settings.displayDuration;el('sv-duration').textContent=settings.displayDuration+'s';}
-  if(el('s-particles')){el('s-particles').value=settings.particleDensity;el('sv-particles').textContent=settings.particleDensity;}
-}
-function setSetting(k,v){
-  settings[k]=parseFloat(v); saveSettings(); syncSettingsUI();
-  if(k==='particleDensity') rebuildParticles();
-}
-
-// ──────────────────────────────────────────────────
-// THREE.JS — SCENE SETUP
-// ──────────────────────────────────────────────────
-function initScene(){
-  const c = document.getElementById('scene-container');
-  clock = new THREE.Clock();
-
-  renderer = new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
-  renderer.setSize(innerWidth,innerHeight);
-  renderer.setClearColor(0x040408,1);
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 0.9;
-  c.appendChild(renderer.domElement);
-
-  scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x040408,0.012);
-
-  camera = new THREE.PerspectiveCamera(40, innerWidth/innerHeight, 0.1, 500);
-  camera.position.set(0,1.5,20);
-
-  // Lights
-  scene.add(new THREE.AmbientLight(0x6B4CCC,0.12));
-  const d1 = new THREE.DirectionalLight(0xBBADEE,0.25); d1.position.set(5,8,6); scene.add(d1);
-  const p1 = new THREE.PointLight(0x8B5CF6,0.6,35); p1.position.set(-6,4,6); scene.add(p1);
-  const p2 = new THREE.PointLight(0x06B6D4,0.3,30); p2.position.set(6,-3,8); scene.add(p2);
-  const p3 = new THREE.PointLight(0x8B5CF6,0.2,20); p3.position.set(0,-5,3); scene.add(p3);
-
-  buildMap();
-  buildGrid();
-  rebuildParticles();
-
-  window.addEventListener('resize',()=>{
-    camera.aspect=innerWidth/innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth,innerHeight);
-  });
-  animate();
-}
-
-// ──────────────────────────────────────────────────
-// MAP CONSTRUCTION
-// ──────────────────────────────────────────────────
-function buildMap(){
-  mapGrp = new THREE.Group();
-  scene.add(mapGrp);
-
-  // Island surfaces
-  addIsland(TT, 0.10);
-  addIsland(TB, 0.06);
-
-  // Coastline glow tubes
-  addCoastGlow(TT, 0.018, 0.55);
-  addCoastGlow(TB, 0.014, 0.50);
-
-  // Second (outer) glow ring for extra luminance
-  addCoastGlow(TT, 0.035, 0.12);
-  addCoastGlow(TB, 0.025, 0.10);
-
-  // Ocean base plane
-  const og = new THREE.PlaneGeometry(80,50);
-  const om = new THREE.MeshBasicMaterial({color:0x030308,transparent:true,opacity:0.6});
-  const op = new THREE.Mesh(og,om); op.position.z=-0.3; mapGrp.add(op);
-
-  // Center map
-  mapGrp.position.set(-MAP_S*0.5, MAP_S*0.37, 0);
-}
-
-function addIsland(pts, depth){
-  const shape = new THREE.Shape();
-  pts.forEach((p,i)=>{ const x=p[0]*MAP_S, y=-p[1]*MAP_S; i===0?shape.moveTo(x,y):shape.lineTo(x,y); });
-  shape.closePath();
-  const geo = new THREE.ExtrudeGeometry(shape,{depth,bevelEnabled:true,bevelThickness:0.025,bevelSize:0.025,bevelSegments:4});
-  const mat = new THREE.MeshStandardMaterial({color:0x151525,metalness:0.7,roughness:0.35,emissive:0x0d0d1a,emissiveIntensity:0.4});
-  mapGrp.add(new THREE.Mesh(geo,mat));
-}
-
-function addCoastGlow(pts, radius, opacity){
-  const v = pts.map(p=>new THREE.Vector3(p[0]*MAP_S,-p[1]*MAP_S,0.13));
-  const curve = new THREE.CatmullRomCurve3(v,true);
-  const geo = new THREE.TubeGeometry(curve,160,radius,8,true);
-  const mat = new THREE.MeshBasicMaterial({color:0x8B5CF6,transparent:true,opacity,blending:THREE.AdditiveBlending,depthWrite:false});
-  mapGrp.add(new THREE.Mesh(geo,mat));
-}
-
-function buildGrid(){
-  const gm = new THREE.LineBasicMaterial({color:0x8B5CF6,transparent:true,opacity:0.025});
-  for(let i=-40;i<=40;i+=2.5){
-    const a=[new THREE.Vector3(i,-25,-0.4),new THREE.Vector3(i,25,-0.4)];
-    const b=[new THREE.Vector3(-40,i*0.625,-0.4),new THREE.Vector3(40,i*0.625,-0.4)];
-    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(a),gm));
-    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(b),gm));
-  }
-}
-
-function rebuildParticles(){
-  if(particleSys){scene.remove(particleSys);particleSys.geometry.dispose();particleSys.material.dispose();}
-  const n=Math.floor(settings.particleDensity*6);
-  if(n<1)return;
-  const pos=new Float32Array(n*3);
-  for(let i=0;i<n;i++){pos[i*3]=(Math.random()-0.5)*50;pos[i*3+1]=(Math.random()-0.5)*30;pos[i*3+2]=(Math.random()-0.5)*12-2;}
-  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));
-  const m=new THREE.PointsMaterial({color:0x8B5CF6,size:0.04,transparent:true,opacity:0.25,sizeAttenuation:true,blending:THREE.AdditiveBlending,depthWrite:false});
-  particleSys=new THREE.Points(g,m);scene.add(particleSys);
-}
-
-// ──────────────────────────────────────────────────
-// COORDINATE UTILS
-// ──────────────────────────────────────────────────
-function n2s(nx,ny){ return {x:nx*MAP_S+mapGrp.position.x, y:-ny*MAP_S+mapGrp.position.y, z:0.15}; }
-function n2screen(nx,ny){
-  const p=n2s(nx,ny);
-  const v=new THREE.Vector3(p.x,p.y,p.z).project(camera);
-  return {x:(v.x*0.5+0.5)*innerWidth, y:(-v.y*0.5+0.5)*innerHeight};
-}
-function screen2n(sx,sy){
-  const v=new THREE.Vector3((sx/innerWidth)*2-1,-(sy/innerHeight)*2+1,0.5);
-  v.unproject(camera);
-  const d=v.sub(camera.position).normalize();
-  const t=-camera.position.z/d.z;
-  const pt=camera.position.clone().add(d.multiplyScalar(t));
-  return {x:Math.max(0,Math.min(1,(pt.x-mapGrp.position.x)/MAP_S)), y:Math.max(0,Math.min(1,-(pt.y-mapGrp.position.y)/MAP_S))};
-}
-
-// ──────────────────────────────────────────────────
-// 3D PIN OBJECTS
-// ──────────────────────────────────────────────────
-function addPin(proj){
-  const p=n2s(proj.mapX,proj.mapY);
-  const g=new THREE.Group(); g.position.set(p.x,p.y,p.z);
-
-  // Core sphere
-  const cs=new THREE.Mesh(new THREE.SphereGeometry(0.055,16,16),new THREE.MeshBasicMaterial({color:0x8B5CF6,transparent:true,opacity:0.95}));
-  g.add(cs);
-
-  // Inner glow
-  const ig=new THREE.Mesh(new THREE.SphereGeometry(0.12,16,16),new THREE.MeshBasicMaterial({color:0x8B5CF6,transparent:true,opacity:0.18,blending:THREE.AdditiveBlending,depthWrite:false}));
-  g.add(ig);
-
-  // Outer glow
-  const og=new THREE.Mesh(new THREE.SphereGeometry(0.22,16,16),new THREE.MeshBasicMaterial({color:0x8B5CF6,transparent:true,opacity:0.06,blending:THREE.AdditiveBlending,depthWrite:false}));
-  g.add(og);
-
-  // Ring
-  const rg=new THREE.Mesh(new THREE.RingGeometry(0.14,0.16,32),new THREE.MeshBasicMaterial({color:0x8B5CF6,transparent:true,opacity:0.35,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false}));
-  g.add(rg);
-
-  // Vertical beam
-  const bg=new THREE.CylinderGeometry(0.004,0.004,0.6,8);
-  const bm=new THREE.MeshBasicMaterial({color:0x8B5CF6,transparent:true,opacity:0.2,blending:THREE.AdditiveBlending,depthWrite:false});
-  const beam=new THREE.Mesh(bg,bm); beam.rotation.x=Math.PI/2; beam.position.z=0.3; g.add(beam);
-
-  g.userData={id:proj.id,core:cs,inner:ig,outer:og,ring:rg,beam};
-  mapGrp.add(g);
-  pinMeshes[proj.id]=g;
-}
-
-function removePin(id){
-  const m=pinMeshes[id]; if(!m)return;
-  mapGrp.remove(m);
-  m.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();});
-  delete pinMeshes[id];
-}
-
-function rebuildPins(){
-  Object.keys(pinMeshes).forEach(removePin);
-  projects.filter(p=>p.enabled).forEach(addPin);
-}
-
-// ──────────────────────────────────────────────────
-// HQ CONNECTION LINES
-// ──────────────────────────────────────────────────
-function buildHQ(){
-  clearHQ();
-  if(settings.mode!=='headquarters')return;
-  const hqN=LOCS['Port of Spain']||[0.185,0.420];
-  const hq=n2s(hqN[0],hqN[1]);
-
-  // HQ beacon
-  const bm=new THREE.Mesh(new THREE.SphereGeometry(0.1,16,16),new THREE.MeshBasicMaterial({color:0x06B6D4,transparent:true,opacity:0.85,blending:THREE.AdditiveBlending}));
-  bm.position.set(hq.x,hq.y,0.2); mapGrp.add(bm); hqObjs.push(bm);
-  const bg=new THREE.Mesh(new THREE.SphereGeometry(0.25,16,16),new THREE.MeshBasicMaterial({color:0x06B6D4,transparent:true,opacity:0.08,blending:THREE.AdditiveBlending,depthWrite:false}));
-  bg.position.set(hq.x,hq.y,0.2); mapGrp.add(bg); hqObjs.push(bg);
-
-  projects.filter(p=>p.enabled).forEach(proj=>{
-    const pp=n2s(proj.mapX,proj.mapY);
-    const mid=new THREE.Vector3((hq.x+pp.x)/2,(hq.y+pp.y)/2+0.6,0.4);
-    const curve=new THREE.QuadraticBezierCurve3(new THREE.Vector3(hq.x,hq.y,0.18),mid,new THREE.Vector3(pp.x,pp.y,0.18));
-    const tg=new THREE.TubeGeometry(curve,50,0.006,8,false);
-    const tm=new THREE.MeshBasicMaterial({color:0x8B5CF6,transparent:true,opacity:0.12,blending:THREE.AdditiveBlending,depthWrite:false});
-    const line=new THREE.Mesh(tg,tm); mapGrp.add(line); hqObjs.push(line);
-
-    // Pulse dot
-    const pd=new THREE.Mesh(new THREE.SphereGeometry(0.025,8,8),new THREE.MeshBasicMaterial({color:0x06B6D4,transparent:true,opacity:0.85,blending:THREE.AdditiveBlending}));
-    pd.userData.curve=curve; pd.userData.t=Math.random();
-    mapGrp.add(pd); hqObjs.push(pd);
-  });
-}
-function clearHQ(){hqObjs.forEach(m=>{mapGrp.remove(m);if(m.geometry)m.geometry.dispose();if(m.material)m.material.dispose();});hqObjs=[];}
-
-// ──────────────────────────────────────────────────
-// RENDER LOOP
-// ──────────────────────────────────────────────────
-function animate(){
-  animId=requestAnimationFrame(animate);
-  const dt=clock.getDelta(), t=clock.getElapsedTime();
-
-  // Smooth camera lerp
-  camera.position.x+=(camTarget.x-camera.position.x)*0.018;
-  camera.position.y+=(camTarget.y-camera.position.y)*0.018;
-  camera.position.z+=(camTarget.z-camera.position.z)*0.018;
-  camera.lookAt(camLook.x,camLook.y,camLook.z);
-
-  // Ambient drift (only when not admin-focusing)
-  if(!isAdmin && startupDone){
-    const m=settings.mode;
-    if(m==='ambient'||m==='night'){
-      camTarget.x=Math.sin(t*0.04)*2;
-      camTarget.y=1.5+Math.cos(t*0.055)*0.6;
-      camTarget.z=20+Math.sin(t*0.025)*1.5;
-    } else if(m==='headquarters'){
-      camTarget.x=Math.sin(t*0.025)*0.6-0.8;
-      camTarget.y=1.8+Math.sin(t*0.035)*0.3;
-      camTarget.z=19;
-    }
-  }
-
-  // Pin animations
-  for(const id in pinMeshes){
-    const g=pinMeshes[id], u=g.userData;
-    const phase=t*2+g.position.x*3;
-    if(u.inner){u.inner.scale.setScalar(1+Math.sin(phase)*0.25);u.inner.material.opacity=0.15+Math.sin(phase+1)*0.08;}
-    if(u.outer){u.outer.scale.setScalar(1+Math.sin(phase*0.7)*0.15);}
-    if(u.ring){u.ring.rotation.z=t*0.4+g.position.y;u.ring.scale.setScalar(1+Math.sin(phase*0.5)*0.1);}
-  }
-
-  // Particles
-  if(particleSys){
-    const a=particleSys.geometry.attributes.position.array;
-    for(let i=0;i<a.length;i+=3){a[i+1]+=Math.sin(t*0.8+a[i]*0.3)*0.0008;a[i]+=Math.cos(t*0.4+a[i+1]*0.2)*0.0004;}
-    particleSys.geometry.attributes.position.needsUpdate=true;
-    particleSys.rotation.z=t*0.008;
-  }
-
-  // HQ pulses
-  hqObjs.forEach(m=>{
-    if(m.userData&&m.userData.curve){
-      m.userData.t=(m.userData.t+dt*0.15)%1;
-      m.position.copy(m.userData.curve.getPoint(m.userData.t));
-    }
-  });
-
-  // Coastline glow pulse
-  if(mapGrp) mapGrp.children.forEach(ch=>{
-    if(ch.geometry&&ch.geometry.type==='TubeGeometry'&&ch.material){
-      const base=ch.material.userData?.baseOp??ch.material.opacity;
-      if(!ch.material.userData) ch.material.userData={baseOp:ch.material.opacity};
-      ch.material.opacity=ch.material.userData.baseOp*(0.75+0.25*Math.sin(t*1.0+ch.position.x));
-    }
-  });
-
-  // Night mode
-  renderer.toneMappingExposure = settings.mode==='night'?0.35:0.9;
-
-  // Light sweep
-  const ls=document.getElementById('light-sweep');
-  if(ls){ls.style.setProperty('--lx',(50+Math.sin(t*0.18)*28)+'%');ls.style.setProperty('--ly',(50+Math.cos(t*0.13)*18)+'%');}
-
-  renderer.render(scene,camera);
-}
-
-// ──────────────────────────────────────────────────
-// STARTUP SEQUENCE
-// ──────────────────────────────────────────────────
-function runStartup(){
-  const ov=document.getElementById('startup-overlay');
-  const glow=ov.querySelector('.startup-glow');
-  const tag=ov.querySelector('.tagline');
-  // Use whichever logo element is visible — the real img or the placeholder SVG
-  const logoImg=document.getElementById('startup-logo');
-  const logoPlaceholder=document.getElementById('startup-logo-placeholder');
-  const logo=(logoImg&&logoImg.style.display!=='none')?logoImg:logoPlaceholder;
-  const tl=gsap.timeline();
-  tl.to(glow,{opacity:0.7,scale:1.3,duration:2.5,ease:'power2.out'});
-  tl.to(logo,{opacity:0.85,scale:1,duration:2,ease:'power2.out'},'-=1.5');
-  tl.to(tag,{opacity:0.5,duration:1.5,ease:'power2.out'},'-=0.5');
-  tl.to({},{duration:2});
-  tl.to([logo,tag,glow],{opacity:0,duration:1.5,ease:'power2.inOut'});
-  tl.to(ov,{opacity:0,duration:1,ease:'power2.inOut',onComplete:()=>{ov.style.display='none';startupDone=true;onReady();}},'-=0.5');
-}
-
-function onReady(){
-  gsap.to('#logo-container',{opacity:1,duration:2});
-  gsap.to('#mode-indicator',{opacity:1,duration:1.5,delay:0.5});
-  if(projects.length===0) showEmpty(); else {hideEmpty();startMode();}
-}
-
-function showEmpty(){document.getElementById('empty-state').classList.add('active');gsap.fromTo('#empty-state h2',{y:20,opacity:0},{y:0,opacity:1,duration:1.5,ease:'power2.out'});gsap.fromTo('#empty-state p',{y:14,opacity:0},{y:0,opacity:0.4,duration:1.5,delay:0.3,ease:'power2.out'});}
-function hideEmpty(){document.getElementById('empty-state').classList.remove('active');}
-
-// ──────────────────────────────────────────────────
-// DISPLAY MODES
-// ──────────────────────────────────────────────────
-function startMode(){
-  stopTour(); clearHQ(); hideCard(); hideMedia();
-  document.getElementById('mode-indicator').textContent=MODES.find(m=>m.id===settings.mode)?.name||'Portfolio Tour';
-  const enabled=projects.filter(p=>p.enabled);
-  if(enabled.length===0&&settings.mode!=='ambient'&&settings.mode!=='night'){showEmpty();return;}
-  hideEmpty();
-  switch(settings.mode){
-    case 'portfolio': tourNext(); break;
-    case 'ambient': camTarget={x:0,y:1.5,z:20}; break;
-    case 'headquarters': camTarget={x:-0.8,y:1.8,z:19}; buildHQ(); break;
-    case 'timeline': runTimeline(); break;
-    case 'showcase': showcaseNext(); break;
-    case 'night': camTarget={x:0,y:1.5,z:22}; break;
-  }
-}
-
-// Portfolio Tour
-function tourNext(){
-  const en=projects.filter(p=>p.enabled); if(!en.length)return;
-  hideCard();hideMedia();deactivatePins();
-  camTarget={x:0,y:1.5,z:20}; camLook={x:0,y:-0.5,z:0};
-  setTimeout(()=>{
-    projIdx=(projIdx+1)%en.length;
-    const proj=en[projIdx], p=n2s(proj.mapX,proj.mapY);
-    camTarget={x:p.x*0.8,y:p.y*0.6+1.5,z:9}; camLook={x:p.x,y:p.y,z:0};
-    activatePin(proj.id);
-    setTimeout(()=>{showCard(proj);showMedia(proj);},settings.transitionSpeed*700);
-    tourTimer=setTimeout(()=>{deactivatePins();camTarget={x:0,y:1.5,z:20};camLook={x:0,y:-0.5,z:0};setTimeout(tourNext,2200);},
-      (settings.transitionSpeed+settings.displayDuration)*1000);
-  },1800);
-}
-
-// Timeline
-function runTimeline(){
-  const sorted=[...projects].filter(p=>p.enabled).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-  Object.values(pinMeshes).forEach(g=>{g.visible=false;});
-  sorted.forEach((p,i)=>setTimeout(()=>{
-    const m=pinMeshes[p.id]; if(m){m.visible=true;gsap.fromTo(m.scale,{x:0,y:0,z:0},{x:1,y:1,z:1,duration:0.9,ease:'back.out(2)'});}
-  },i*900));
-  camTarget={x:0,y:1.5,z:20};
-}
-
-// Client Showcase
-function showcaseNext(){
-  const en=projects.filter(p=>p.enabled); if(!en.length)return;
-  projIdx=(projIdx+1)%en.length; const proj=en[projIdx];
-  showCard(proj);showMedia(proj);
-  tourTimer=setTimeout(()=>{hideCard();hideMedia();setTimeout(showcaseNext,1500);},settings.displayDuration*1000);
-}
-
-function stopTour(){if(tourTimer){clearTimeout(tourTimer);tourTimer=null;}if(mediaTimer){clearInterval(mediaTimer);mediaTimer=null;}deactivatePins();}
-
-// Pin activation
-function activatePin(id){
-  const m=pinMeshes[id]; if(!m)return;
-  gsap.to(m.scale,{x:2,y:2,z:2,duration:0.9,ease:'back.out(2)'});
-  if(m.userData.inner)gsap.to(m.userData.inner.material,{opacity:0.5,duration:0.6});
-  if(m.userData.ring)gsap.to(m.userData.ring.material,{opacity:0.7,duration:0.6});
-
-  // SVG scan ring via GSAP
-  const proj_=projects.find(p=>p.id===id);
-  if(proj_){
-    const sp=n2screen(proj_.mapX,proj_.mapY);
-    const svg=document.getElementById('svg-overlay');
-    for(let i=0;i<3;i++){
-      setTimeout(()=>{
-        const ring=document.createElementNS('http://www.w3.org/2000/svg','circle');
-        ring.setAttribute('cx',sp.x);ring.setAttribute('cy',sp.y);ring.setAttribute('r','4');
-        ring.setAttribute('fill','none');ring.setAttribute('stroke','#8B5CF6');ring.setAttribute('stroke-width','1.2');ring.setAttribute('opacity','0.7');
-        svg.appendChild(ring);
-        gsap.to(ring,{attr:{r:80,'stroke-width':0.2},opacity:0,duration:2.5,ease:'power2.out',onComplete:()=>ring.remove()});
-      },i*350);
-    }
-  }
-}
-function deactivatePins(){
-  Object.values(pinMeshes).forEach(m=>{
-    gsap.to(m.scale,{x:1,y:1,z:1,duration:0.5});
-    if(m.userData.inner)gsap.to(m.userData.inner.material,{opacity:0.18,duration:0.5});
-    if(m.userData.ring)gsap.to(m.userData.ring.material,{opacity:0.35,duration:0.5});
-  });
-}
-
-// Card
-function showCard(proj){
-  document.getElementById('card-category').textContent=proj.category||'Project';
-  document.getElementById('card-title').textContent=proj.name;
-  document.getElementById('card-location').textContent=proj.location||'';
-  document.getElementById('card-description').textContent=proj.description||'';
-  document.getElementById('card-date').textContent=proj.date?fmtDate(proj.date):'';
-  document.getElementById('project-card').classList.add('active');
-}
-function hideCard(){document.getElementById('project-card').classList.remove('active');}
-function fmtDate(d){try{const[y,m]=d.split('-');return['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+m-1]+' '+y;}catch(e){return d;}}
-
-// Media viewer
-async function showMedia(proj){
-  if(!proj.mediaIds||!proj.mediaIds.length)return;
-  document.getElementById('media-viewer').classList.add('active');
-  mediaIdx=0;
-  const display=async(i)=>{
-    try{
-      const md=await get('media',proj.mediaIds[i]); if(!md)return;
-      const img=document.getElementById('media-img'),vid=document.getElementById('media-vid');
-      if(md.type.startsWith('image')){vid.style.display='none';vid.src='';img.style.display='block';img.src=md.data;gsap.fromTo(img,{opacity:0,scale:1.04},{opacity:1,scale:1,duration:1});}
-      else{img.style.display='none';img.src='';vid.style.display='block';vid.src=md.data;vid.play().catch(()=>{});gsap.fromTo(vid,{opacity:0},{opacity:1,duration:0.5});}
-      document.getElementById('media-counter').textContent=`${i+1} / ${proj.mediaIds.length}`;
-    }catch(e){}
-  };
-  await display(0);
-  if(proj.mediaIds.length>1){if(mediaTimer)clearInterval(mediaTimer);mediaTimer=setInterval(async()=>{mediaIdx=(mediaIdx+1)%proj.mediaIds.length;await display(mediaIdx);},5500);}
-}
-function hideMedia(){
-  document.getElementById('media-viewer').classList.remove('active');
-  if(mediaTimer){clearInterval(mediaTimer);mediaTimer=null;}
-  document.getElementById('media-img').src='';document.getElementById('media-vid').src='';
-}
-
-// ──────────────────────────────────────────────────
-// LOGO TRIGGER (triple-click)
-// ──────────────────────────────────────────────────
-function initLogo(){
-  const el=document.getElementById('logo-container');
-  let clicks=0,timer=null;
-  el.addEventListener('click',e=>{
-    e.preventDefault(); clicks++;
-    if(clicks===1) timer=setTimeout(()=>{clicks=0;},2000);
-    if(clicks>=3){clearTimeout(timer);clicks=0;el.classList.add('glow');setTimeout(()=>el.classList.remove('glow'),800);openLogin();}
-  });
-}
-
-// ──────────────────────────────────────────────────
-// LOGIN
-// ──────────────────────────────────────────────────
-function openLogin(){document.getElementById('login-modal').classList.add('active');document.getElementById('login-pw').value='';document.getElementById('login-error').classList.remove('show');setTimeout(()=>document.getElementById('login-pw').focus(),300);}
-function closeLogin(){document.getElementById('login-modal').classList.remove('active');}
-function attemptLogin(){
-  if(document.getElementById('login-pw').value===PW){closeLogin();isAdmin=true;openAdmin();}
-  else{document.getElementById('login-error').classList.add('show');gsap.fromTo('.login-box',{x:-6},{x:0,duration:0.5,ease:'elastic.out(1,0.3)'});setTimeout(()=>document.getElementById('login-error').classList.remove('show'),2000);}
-}
-document.getElementById('login-pw').addEventListener('keydown',e=>{if(e.key==='Enter')attemptLogin();});
-
-// ──────────────────────────────────────────────────
-// ADMIN DASHBOARD
-// ──────────────────────────────────────────────────
-function openAdmin(){
-  stopTour();hideCard();hideMedia();isAdmin=true;
-  document.getElementById('admin-dashboard').classList.add('active');
-  renderModes();renderList();
-  // Refresh logo preview
-  const corner=document.getElementById('corner-logo-img');
-  const hasLogo=corner.style.display!=='none'&&corner.src&&!corner.src.endsWith('#');
-  updateLogoAdminUI(hasLogo);
-}
-function closeAdmin(){
-  document.getElementById('admin-dashboard').classList.remove('active');isAdmin=false;
-  if(projects.length===0)showEmpty(); else{hideEmpty();startMode();}
-}
-function renderModes(){
-  const c=document.getElementById('mode-selector');c.innerHTML='';
-  MODES.forEach(m=>{
-    const d=document.createElement('div');d.className='mode-option'+(settings.mode===m.id?' active':'');
-    d.innerHTML=`<div class="mode-name">${m.name}</div><div class="mode-desc">${m.desc}</div>`;
-    d.onclick=()=>{settings.mode=m.id;saveSettings();renderModes();document.getElementById('mode-indicator').textContent=m.name;notify('Mode: '+m.name);};
-    c.appendChild(d);
-  });
-}
-function renderList(filter=''){
-  const c=document.getElementById('proj-list');c.innerHTML='';
-  const list=projects.filter(p=>!filter||p.name.toLowerCase().includes(filter.toLowerCase())||(p.location||'').toLowerCase().includes(filter.toLowerCase()));
-  if(!list.length){c.innerHTML='<div style="text-align:center;padding:16px;color:var(--text3);font-size:11px;letter-spacing:2px">No projects</div>';return;}
-  list.forEach((p,i)=>{
-    const d=document.createElement('div');d.className='project-item';d.style.opacity=p.enabled?'1':'0.35';
-    d.innerHTML=`
-      <div class="proj-thumb" id="th-${p.id}">📍</div>
-      <div class="proj-info"><div class="proj-name">${esc(p.name)}</div><div class="proj-loc">${esc(p.location||'—')} · ${esc(p.category||'')}</div></div>
-      <div class="proj-actions">
-        <button class="proj-action-btn" title="Toggle" onclick="APP.toggleProj('${p.id}')">${p.enabled?'◉':'○'}</button>
-        <button class="proj-action-btn" title="Duplicate" onclick="APP.dupProj('${p.id}')">⧉</button>
-        <button class="proj-action-btn" title="Edit" onclick="APP.openForm('${p.id}')">✎</button>
-        <button class="proj-action-btn del" title="Delete" onclick="APP.delProj('${p.id}')">✕</button>
-        ${i>0?`<button class="proj-action-btn" title="Up" onclick="APP.moveProj('${p.id}',-1)">↑</button>`:''}
-        ${i<list.length-1?`<button class="proj-action-btn" title="Down" onclick="APP.moveProj('${p.id}',1)">↓</button>`:''}
-      </div>`;
-    c.appendChild(d);
-    if(p.mediaIds&&p.mediaIds.length) loadThumb(p.id,p.mediaIds[0]);
-  });
-}
-function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
-async function loadThumb(pid,mid){try{const m=await get('media',mid);if(m&&m.type.startsWith('image')){const e=document.getElementById('th-'+pid);if(e)e.innerHTML=`<img src="${m.data}" alt="">`;}}catch(e){}}
-function filterList(q){searchQ=q;renderList(q);}
-
-// ──────────────────────────────────────────────────
-// PROJECT FORM
-// ──────────────────────────────────────────────────
-function openForm(id){
-  editId=id||null;pendingMedia=[];existingMedia=[];
-  if(id){
-    document.getElementById('form-title').textContent='Edit Project';
-    const p=projects.find(x=>x.id===id); if(!p)return;
-    document.getElementById('f-name').value=p.name||'';
-    document.getElementById('f-category').value=p.category||'Commercial';
-    document.getElementById('f-location').value=p.location||'';
-    document.getElementById('f-coords').value=p.mapX!=null?`${p.mapX.toFixed(3)}, ${p.mapY.toFixed(3)}`:'';
-    document.getElementById('f-desc').value=p.description||'';
-    document.getElementById('f-date').value=p.date||'';
-    document.getElementById('f-enabled').classList.toggle('on',p.enabled!==false);
-    existingMedia=[...(p.mediaIds||[])];
-    renderThumbs();
-  } else {
-    document.getElementById('form-title').textContent='Add Project';
-    ['f-name','f-location','f-coords','f-desc','f-date'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('f-category').value='Commercial';
-    document.getElementById('f-enabled').classList.add('on');
-    document.getElementById('media-thumbs').innerHTML='';
-  }
-  document.getElementById('project-form-modal').classList.add('active');
-}
-function closeForm(){document.getElementById('project-form-modal').classList.remove('active');editId=null;pendingMedia=[];existingMedia=[];}
-
-async function saveProject(){
-  const name=document.getElementById('f-name').value.trim();
-  if(!name){notify('Enter a project name');return;}
-  const coords=document.getElementById('f-coords').value;
-  let mx=0.4,my=0.6;
-  if(coords){const pts=coords.split(',').map(s=>parseFloat(s.trim()));if(pts.length===2&&!isNaN(pts[0])&&!isNaN(pts[1])){mx=pts[0];my=pts[1];}}
-
-  // Save new media
-  const newIds=[];
-  for(const m of pendingMedia){
-    const id='m_'+Date.now()+'_'+Math.random().toString(36).substr(2,8);
-    await put('media',{id,type:m.type,data:m.data,name:m.name});
-    newIds.push(id);
-  }
-
-  const proj={
-    id:editId||'p_'+Date.now()+'_'+Math.random().toString(36).substr(2,8),
-    name, category:document.getElementById('f-category').value,
-    location:document.getElementById('f-location').value.trim(),
-    mapX:mx,mapY:my,
-    description:document.getElementById('f-desc').value.trim(),
-    date:document.getElementById('f-date').value,
-    enabled:document.getElementById('f-enabled').classList.contains('on'),
-    mediaIds:[...existingMedia,...newIds],
-    order:editId?(projects.find(p=>p.id===editId)?.order??projects.length):projects.length
-  };
-  await put('projects',proj);
-  const ei=projects.findIndex(p=>p.id===proj.id);
-  if(ei>=0)projects[ei]=proj; else projects.push(proj);
-  projects.sort((a,b)=>(a.order||0)-(b.order||0));
-  rebuildPins();renderList(searchQ);closeForm();
-  notify(editId?'Project updated':'Project added');
-}
-
-async function delProj(id){
-  if(!confirm('Delete this project?'))return;
-  const p=projects.find(x=>x.id===id);
-  if(p&&p.mediaIds)for(const mid of p.mediaIds)try{await del('media',mid);}catch(e){}
-  await del('projects',id);
-  projects=projects.filter(x=>x.id!==id);
-  removePin(id);renderList(searchQ);notify('Project deleted');
-}
-
-async function toggleProj(id){
-  const p=projects.find(x=>x.id===id);if(!p)return;
-  p.enabled=!p.enabled;await put('projects',p);
-  rebuildPins();renderList(searchQ);notify(p.enabled?'Enabled':'Disabled');
-}
-
-async function dupProj(id){
-  const s=projects.find(x=>x.id===id);if(!s)return;
-  const n={...JSON.parse(JSON.stringify(s)),id:'p_'+Date.now()+'_'+Math.random().toString(36).substr(2,8),name:s.name+' (Copy)',order:projects.length};
-  await put('projects',n);projects.push(n);
-  rebuildPins();renderList(searchQ);notify('Duplicated');
-}
-
-async function moveProj(id,dir){
-  const i=projects.findIndex(p=>p.id===id);if(i<0)return;
-  const j=i+dir;if(j<0||j>=projects.length)return;
-  [projects[i],projects[j]]=[projects[j],projects[i]];
-  for(let k=0;k<projects.length;k++){projects[k].order=k;await put('projects',projects[k]);}
-  renderList(searchQ);
-}
-
-// ──────────────────────────────────────────────────
-// MEDIA HANDLING
-// ──────────────────────────────────────────────────
-function initMedia(){
-  const dz=document.getElementById('drop-zone'),inp=document.getElementById('media-input');
-  ['dragenter','dragover'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.add('dragover');}));
-  ['dragleave','drop'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.remove('dragover');}));
-  dz.addEventListener('drop',e=>processFiles(e.dataTransfer.files));
-  inp.addEventListener('change',e=>{processFiles(e.target.files);inp.value='';});
-}
-function processFiles(files){
-  const ok=['image/jpeg','image/png','image/webp','video/mp4','video/webm','video/quicktime'];
-  Array.from(files).forEach(f=>{if(!ok.includes(f.type))return;const r=new FileReader();r.onload=e=>{pendingMedia.push({type:f.type,data:e.target.result,name:f.name});renderThumbs();};r.readAsDataURL(f);});
-}
-async function renderThumbs(){
-  const c=document.getElementById('media-thumbs');c.innerHTML='';
-  for(let i=0;i<existingMedia.length;i++){
-    try{const m=await get('media',existingMedia[i]);if(!m)continue;
-    const d=document.createElement('div');d.className='media-thumb'+(m.type.startsWith('video')?' is-video':'');
-    d.innerHTML=(m.type.startsWith('image')?`<img src="${m.data}">`:`<video src="${m.data}" muted></video>`)+`<button class="remove-media" onclick="APP.rmExist(${i})">✕</button>`;
-    c.appendChild(d);}catch(e){}
-  }
-  pendingMedia.forEach((m,i)=>{
-    const d=document.createElement('div');d.className='media-thumb'+(m.type.startsWith('video')?' is-video':'');
-    d.innerHTML=(m.type.startsWith('image')?`<img src="${m.data}">`:`<video src="${m.data}" muted></video>`)+`<button class="remove-media" onclick="APP.rmPend(${i})">✕</button>`;
-    c.appendChild(d);
-  });
-}
-function rmPend(i){pendingMedia.splice(i,1);renderThumbs();}
-function rmExist(i){existingMedia.splice(i,1);renderThumbs();}
-
-// ──────────────────────────────────────────────────
-// LOGO MANAGEMENT
-// ──────────────────────────────────────────────────
-function initLogoUpload(){
-  const inp=document.getElementById('logo-file-input');
-  inp.addEventListener('change',async e=>{
-    const file=e.target.files[0]; if(!file)return;
-    const reader=new FileReader();
-    reader.onload=async ev=>{
-      const dataUrl=ev.target.result;
-      await put('media',{id:'company_logo',type:file.type,data:dataUrl,name:file.name});
-      applyLogo(dataUrl);
-      updateLogoAdminUI(true,file.name);
-      notify('Logo uploaded');
-    };
-    reader.readAsDataURL(file);
-    inp.value='';
-  });
-}
-
-function uploadLogo(){
-  document.getElementById('logo-file-input').click();
-}
-
-async function removeLogo(){
-  try{await del('media','company_logo');}catch(e){}
-  // Reset to placeholder
-  const corner=document.getElementById('corner-logo-img');
-  corner.style.display='none';
-  document.getElementById('corner-logo-placeholder').style.display='block';
-
-  const startup=document.getElementById('startup-logo');
-  startup.style.display='none';
-  document.getElementById('startup-logo-placeholder').style.display='flex';
-
-  updateLogoAdminUI(false);
-  notify('Logo removed');
-}
-
-async function loadSavedLogo(){
-  try{
-    const logo=await get('media','company_logo');
-    if(logo&&logo.data){
-      applyLogo(logo.data);
-      return true;
-    }
-  }catch(e){}
-  return false;
-}
-
-function applyLogo(dataUrl){
-  // Apply to corner logo
-  const corner=document.getElementById('corner-logo-img');
-  corner.src=dataUrl;
-  corner.style.display='';
-  corner.onerror=null;
-  document.getElementById('corner-logo-placeholder').style.display='none';
-
-  // Apply to startup logo
-  const startup=document.getElementById('startup-logo');
-  startup.src=dataUrl;
-  startup.style.display='';
-  startup.onerror=null;
-  document.getElementById('startup-logo-placeholder').style.display='none';
-}
-
-function updateLogoAdminUI(hasLogo,fileName){
-  const preview=document.getElementById('admin-logo-preview');
-  const status=document.getElementById('logo-status');
-  const removeBtn=document.getElementById('remove-logo-btn');
-  if(hasLogo){
-    const corner=document.getElementById('corner-logo-img');
-    preview.innerHTML=`<img src="${corner.src}" alt="Logo">`;
-    status.textContent=fileName||'Logo uploaded';
-    removeBtn.style.display='';
-  } else {
-    preview.innerHTML='<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="10" width="80" height="80" rx="12" stroke="#8B5CF6" stroke-width="1.5" opacity="0.3"/><path d="M50 30L60 45H40L50 30Z" stroke="#8B5CF6" stroke-width="1.5" opacity="0.35"/><circle cx="50" cy="60" r="9" stroke="#8B5CF6" stroke-width="1.5" opacity="0.3"/></svg>';
-    status.textContent='No logo uploaded';
-    removeBtn.style.display='none';
-  }
-}
-
-// ──────────────────────────────────────────────────
-// LOCATION PICKER
-// ──────────────────────────────────────────────────
-function startPick(){picking=true;document.getElementById('pick-mode-overlay').classList.add('active');document.getElementById('pick-mode-hint').classList.add('active');document.getElementById('project-form-modal').style.opacity='0.15';}
-function doPick(e){if(!picking)return;const n=screen2n(e.clientX,e.clientY);document.getElementById('f-coords').value=`${n.x.toFixed(3)}, ${n.y.toFixed(3)}`;endPick();}
-function endPick(){picking=false;document.getElementById('pick-mode-overlay').classList.remove('active');document.getElementById('pick-mode-hint').classList.remove('active');document.getElementById('project-form-modal').style.opacity='1';}
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&picking)endPick();});
-
-// ──────────────────────────────────────────────────
-// EXPORT / IMPORT
-// ──────────────────────────────────────────────────
-async function exportData(){
-  try{const p=await getAll('projects'),m=await getAll('media');
-  const blob=new Blob([JSON.stringify({projects:p,media:m,settings,v:1})],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`iere-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();URL.revokeObjectURL(a.href);notify('Exported');}
-  catch(e){notify('Export failed');}
-}
-function importData(){
-  const inp=document.createElement('input');inp.type='file';inp.accept='.json';
-  inp.onchange=async e=>{
-    try{const txt=await e.target.files[0].text();const data=JSON.parse(txt);if(!data.projects)throw new Error('Invalid');
-    const ap=await getAll('projects');for(const p of ap)await del('projects',p.id);
-    const am=await getAll('media');for(const m of am)await del('media',m.id);
-    for(const p of data.projects)await put('projects',p);
-    if(data.media)for(const m of data.media)await put('media',m);
-    if(data.settings){Object.assign(settings,data.settings);saveSettings();syncSettingsUI();}
-    projects=data.projects;projects.sort((a,b)=>(a.order||0)-(b.order||0));
-    rebuildPins();renderList();renderModes();notify('Imported successfully');}
-    catch(e){notify('Import failed');}
-  };inp.click();
-}
-
-// ──────────────────────────────────────────────────
-// AUTO-BACKUP
-// ──────────────────────────────────────────────────
-function startBackup(){
-  setInterval(async()=>{
-    try{const p=await getAll('projects');
-    await put('backups',{ts:Date.now(),data:JSON.stringify({projects:p,settings})});
-    const all=await getAll('backups');
-    if(all.length>12){const s=all.sort((a,b)=>b.ts-a.ts);for(let i=12;i<s.length;i++)await del('backups',s[i].ts);}
-    }catch(e){}
-  },300000);
-}
-
-// ──────────────────────────────────────────────────
-// NOTIFICATION
-// ──────────────────────────────────────────────────
-function notify(msg){const e=document.getElementById('notification');e.textContent=msg;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2500);}
-
-// ──────────────────────────────────────────────────
-// ERROR RECOVERY
-// ──────────────────────────────────────────────────
-window.addEventListener('error',()=>{try{if(!animId)animate();}catch(e){}});
-window.addEventListener('unhandledrejection',e=>{console.warn('Promise rejection:',e.reason);});
-
-// ──────────────────────────────────────────────────
-// INIT
-// ──────────────────────────────────────────────────
-async function init(){
-  try{
-    await openDB();
-    loadSettings();
-    projects=await getAll('projects');
-    projects.sort((a,b)=>(a.order||0)-(b.order||0));
-    await loadSavedLogo();
-    initScene();
-    rebuildPins();
-    initMedia();
-    initLogoUpload();
-    initLogo();
-    startBackup();
-    runStartup();
-  }catch(e){
-    console.error('Init error:',e);
-    document.getElementById('startup-overlay').style.display='none';
-    startupDone=true;
-    gsap.to('#logo-container',{opacity:1,duration:1});
-    gsap.to('#mode-indicator',{opacity:1,duration:1});
-    showEmpty();
-  }
-}
-document.addEventListener('DOMContentLoaded',init);
-
-// ──────────────────────────────────────────────────
-// PUBLIC
-// ──────────────────────────────────────────────────
-return {
-  closeLogin,attemptLogin,openAdmin,closeAdmin,openForm,closeForm,saveProject,
-  delProj,toggleProj,dupProj,moveProj,filterList,setSetting,
-  startPick,doPick,rmPend,rmExist,exportData,importData,notify,
-  uploadLogo,removeLogo
-};
-})();
-</script>
 </body>
 </html>
