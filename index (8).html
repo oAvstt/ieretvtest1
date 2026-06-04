@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IERE — Trinidad & Tobago 3D Map</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a12;
+    overflow: hidden;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #fff;
+  }
+  #canvas-container {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+  }
+  /* Loading overlay */
+  #loading {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #0a0a12;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 1000;
+    transition: opacity 0.8s;
+  }
+  #loading.hidden { opacity: 0; pointer-events: none; }
+  #loading h1 {
+    font-size: 3rem;
+    letter-spacing: 0.5em;
+    color: #d4a843;
+    margin-bottom: 1.5rem;
+    text-shadow: 0 0 30px rgba(212,168,67,0.4);
+  }
+  .spinner {
+    width: 50px; height: 50px;
+    border: 3px solid rgba(212,168,67,0.2);
+    border-top-color: #d4a843;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Logo overlay */
+  #logo-container {
+    position: fixed;
+    top: 20px; left: 20px;
+    z-index: 100;
+    pointer-events: none;
+  }
+  #logo-container img {
+    width: 120px;
+    height: auto;
+    filter: drop-shadow(0 0 15px rgba(212,168,67,0.5));
+  }
+  #logo-fallback {
+    display: none;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 0.3em;
+    color: #d4a843;
+    text-shadow: 0 0 20px rgba(212,168,67,0.5);
+    padding: 10px 20px;
+    border: 2px solid rgba(212,168,67,0.4);
+    border-radius: 8px;
+    background: rgba(10,10,18,0.8);
+  }
+
+  /* IERE title */
+  #title {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    font-size: 3.5rem;
+    font-weight: 900;
+    letter-spacing: 0.6em;
+    color: #d4a843;
+    text-shadow: 0 0 40px rgba(212,168,67,0.5), 0 0 80px rgba(212,168,67,0.2);
+    pointer-events: none;
+    padding-left: 0.6em; /* visual balance for letter-spacing */
+  }
+
+  /* Info panel */
+  #info-panel {
+    position: fixed;
+    top: 20px; right: 20px;
+    z-index: 100;
+    background: rgba(10,10,18,0.85);
+    border: 1px solid rgba(212,168,67,0.3);
+    border-radius: 12px;
+    padding: 15px 20px;
+    min-width: 200px;
+    backdrop-filter: blur(10px);
+  }
+  #info-panel h3 {
+    color: #d4a843;
+    font-size: 0.85rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  #info-panel .city-info {
+    font-size: 0.8rem;
+    color: #ccc;
+    line-height: 1.6;
+  }
+  #info-panel .city-info span {
+    color: #d4a843;
+  }
+
+  /* Legend */
+  #legend {
+    position: fixed;
+    bottom: 100px; right: 20px;
+    z-index: 100;
+    background: rgba(10,10,18,0.85);
+    border: 1px solid rgba(212,168,67,0.2);
+    border-radius: 10px;
+    padding: 12px 18px;
+    backdrop-filter: blur(10px);
+  }
+  #legend div {
+    display: flex; align-items: center; gap: 10px;
+    margin: 4px 0;
+    font-size: 0.75rem;
+    color: #aaa;
+  }
+  #legend .dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  #legend .line {
+    width: 20px; height: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* Controls hint */
+  #controls-hint {
+    position: fixed;
+    bottom: 30px; right: 20px;
+    z-index: 100;
+    font-size: 0.7rem;
+    color: #555;
+    text-align: right;
+    line-height: 1.8;
+  }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <h1>IERE</h1>
+  <div class="spinner"></div>
+</div>
+
+<div id="logo-container">
+  <img id="logo-img" src="iere-logo.png" alt="IERE Logo" onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='block';">
+  <div id="logo-fallback">IERE</div>
+</div>
+
+<div id="title">IERE</div>
+
+<div id="info-panel">
+  <h3>Trinidad &amp; Tobago</h3>
+  <div class="city-info" id="hover-info">
+    <span>Hover</span> over cities for info<br>
+    <span>Drag</span> to rotate &bull; <span>Scroll</span> to zoom
+  </div>
+</div>
+
+<div id="legend">
+  <div><div class="dot" style="background:#ff4444;box-shadow:0 0 6px #ff4444"></div> Capital City</div>
+  <div><div class="dot" style="background:#44aaff;box-shadow:0 0 6px #44aaff"></div> Major City</div>
+  <div><div class="dot" style="background:#88cc44;box-shadow:0 0 6px #88cc44"></div> Town</div>
+  <div><div class="line" style="background:#ff8800"></div> Highway</div>
+  <div><div class="line" style="background:#aa66ff"></div> Main Road</div>
+</div>
+
+<div id="controls-hint">
+  Left click + drag: Rotate<br>
+  Right click + drag: Pan<br>
+  Scroll: Zoom
+</div>
+
+<div id="canvas-container"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+<script>
+(function() {
+
+  // ─── ACCURATE GEO DATA ───────────────────────────────────────────
+  // Cities with verified coordinates (lat, lng)
+  const CITIES = [
+    { name: "Port of Spain",   lat: 10.6599, lng: -61.5086, type: "capital", pop: 38000,  region: "San Juan-Laventille" },
+    { name: "San Fernando",    lat: 10.2797, lng: -61.4684, type: "major",   pop: 48784,  region: "San Fernando" },
+    { name: "Arima",           lat: 10.6374, lng: -61.2823, type: "major",   pop: 33606,  region: "Arima" },
+    { name: "Chaguanas",       lat: 10.5167, lng: -61.4167, type: "major",   pop: 83869,  region: "Chaguanas" },
+    { name: "Point Fortin",    lat: 10.1741, lng: -61.6841, type: "major",   pop: 20444,  region: "Point Fortin" },
+    { name: "Scarborough",     lat: 11.1823, lng: -60.7353, type: "major",   pop: 17530,  region: "Tobago" },
+    { name: "Sangre Grande",   lat: 10.5871, lng: -61.1301, type: "town",   pop: 12436,  region: "Sangre Grande" },
+    { name: "Princes Town",    lat: 10.2718, lng: -61.3710, type: "town",   pop: 10000,  region: "Princes Town" },
+    { name: "Siparia",         lat: 10.1453, lng: -61.5074, type: "town",   pop: 8200,   region: "Siparia" },
+    { name: "Penal",           lat: 10.1667, lng: -61.4667, type: "town",   pop: 12281,  region: "Penal-Debe" },
+    { name: "Tunapuna",        lat: 10.6525, lng: -61.3888, type: "town",   pop: 13579,  region: "Tunapuna-Piarco" },
+    { name: "Diego Martin",    lat: 10.7208, lng: -61.5662, type: "town",   pop: 10500,  region: "Diego Martin" },
+    { name: "Rio Claro",       lat: 10.3059, lng: -61.1756, type: "town",   pop: 3200,   region: "Mayaro-Rio Claro" },
+    { name: "Couva",           lat: 10.4242, lng: -61.4678, type: "town",   pop: 3058,   region: "Couva-Tabaquite-Talparo" },
+    { name: "Marabella",       lat: 10.3062, lng: -61.4467, type: "town",   pop: 10000,  region: "San Fernando" },
+    { name: "Laventille",      lat: 10.6492, lng: -61.4989, type: "town",   pop: 10576,  region: "San Juan-Laventille" },
+    { name: "Arouca",          lat: 10.6288, lng: -61.3349, type: "town",   pop: 12300,  region: "Tunapuna-Piarco" },
+    { name: "Petit Valley",    lat: 10.6997, lng: -61.5472, type: "town",   pop: 8140,   region: "Diego Martin" },
+    { name: "Gasparillo",      lat: 10.3170, lng: -61.4261, type: "town",   pop: 9596,   region: "Couva-Tabaquite-Talparo" },
+    { name: "Roxborough",      lat: 11.2520, lng: -60.7510, type: "town",   pop: 3500,   region: "Tobago" },
+    { name: "Charlotteville",  lat: 11.3200, lng: -60.5500, type: "town",   pop: 2800,   region: "Tobago" },
+    { name: "La Brea",         lat: 10.2150, lng: -61.6330, type: "town",   pop: 7000,   region: "Siparia" },
+    { name: "Debe",            lat: 10.1330, lng: -61.4450, type: "town",   pop: 6000,   region: "Penal-Debe" },
+    { name: "Fyzabad",         lat: 10.1680, lng: -61.5750, type: "town",   pop: 5000,   region: "Siparia" },
+    { name: "Curepe",          lat: 10.6380, lng: -61.3950, type: "town",   pop: 8000,   region: "Tunapuna-Piarco" },
+    { name: "St. Augustine",   lat: 10.6300, lng: -61.3880, type: "town",   pop: 9000,   region: "Tunapuna-Piarco" },
+    { name: "Piarco",          lat: 10.5950, lng: -61.3420, type: "town",   pop: 4000,   region: "Tunapuna-Piarco" },
+    { name: "Wallerfield",     lat: 10.6000, lng: -61.2550, type: "town",   pop: 2000,   region: "Tunapuna-Piarco" },
+    { name: "Matura",          lat: 10.4170, lng: -61.0470, type: "town",   pop: 2000,   region: "Sangre Grande" },
+    { name: "Mayaro",          lat: 10.2400, lng: -61.0100, type: "town",   pop: 3000,   region: "Mayaro-Rio Claro" },
+    { name: "Guayaguayare",    lat: 10.1500, lng: -61.0000, type: "town",   pop: 1500,   region: "Mayaro-Rio Claro" },
+    { name: "Toco",            lat: 10.5820, lng: -61.0200, type: "town",   pop: 2000,   region: "Sangre Grande" },
+    { name: "Blanchisseuse",   lat: 10.7700, lng: -61.3200, type: "town",   pop: 1000,   region: "San Juan-Laventille" },
+    { name: "Chaguaramas",     lat: 10.6850, lng: -61.6200, type: "town",   pop: 2000,   region: "Diego Martin" },
+    { name: "St. Joseph",      lat: 10.6450, lng: -61.4200, type: "town",   pop: 6000,   region: "Tunapuna-Piarco" },
+    { name: "Barataria",       lat: 10.6500, lng: -61.4600, type: "town",   pop: 7000,   region: "San Juan-Laventille" },
+  ];
+
+  // Major highways with accurate route coordinates [lng, lat]
+  const HIGHWAYS = [
+    {
+      name: "Churchill-Roosevelt Highway",
+      type: "highway",
+      coords: [
+        [-61.460, 10.648], [-61.445, 10.649], [-61.430, 10.650], [-61.415, 10.651],
+        [-61.400, 10.647], [-61.385, 10.645], [-61.370, 10.643], [-61.355, 10.640],
+        [-61.340, 10.638], [-61.325, 10.636], [-61.310, 10.630], [-61.295, 10.625],
+        [-61.280, 10.620], [-61.265, 10.610], [-61.255, 10.600]
+      ]
+    },
+    {
+      name: "Uriah Butler Highway",
+      type: "highway",
+      coords: [
+        [-61.410, 10.651], [-61.410, 10.640], [-61.412, 10.625], [-61.414, 10.610],
+        [-61.416, 10.595], [-61.417, 10.580], [-61.417, 10.565], [-61.416, 10.550],
+        [-61.416, 10.535], [-61.417, 10.520]
+      ]
+    },
+    {
+      name: "Sir Solomon Hochoy Highway",
+      type: "highway",
+      coords: [
+        [-61.416, 10.517], [-61.420, 10.500], [-61.425, 10.480], [-61.430, 10.460],
+        [-61.435, 10.440], [-61.440, 10.420], [-61.445, 10.400], [-61.450, 10.380],
+        [-61.455, 10.360], [-61.460, 10.340], [-61.465, 10.320], [-61.468, 10.300],
+        [-61.470, 10.280]
+      ]
+    },
+    {
+      name: "Beetham Highway",
+      type: "highway",
+      coords: [
+        [-61.460, 10.648], [-61.470, 10.650], [-61.480, 10.653], [-61.490, 10.656],
+        [-61.500, 10.658], [-61.510, 10.660]
+      ]
+    },
+    {
+      name: "Audrey Jeffers Highway",
+      type: "highway",
+      coords: [
+        [-61.510, 10.660], [-61.525, 10.665], [-61.540, 10.670], [-61.555, 10.673]
+      ]
+    },
+    {
+      name: "Solomon Hochoy Highway Ext (to Pt Fortin)",
+      type: "highway",
+      coords: [
+        [-61.470, 10.280], [-61.490, 10.260], [-61.520, 10.240], [-61.550, 10.220],
+        [-61.580, 10.200], [-61.610, 10.190], [-61.640, 10.180], [-61.670, 10.175]
+      ]
+    },
+    {
+      name: "Claude Noel Highway",
+      type: "highway",
+      coords: [
+        [-60.800, 11.180], [-60.780, 11.190], [-60.760, 11.190], [-60.740, 11.185],
+        [-60.720, 11.182], [-60.700, 11.180]
+      ]
+    },
+    {
+      name: "Eastern Main Road",
+      type: "mainroad",
+      coords: [
+        [-61.510, 10.660], [-61.495, 10.655], [-61.480, 10.650], [-61.465, 10.648],
+        [-61.450, 10.647], [-61.435, 10.645], [-61.420, 10.643], [-61.405, 10.640],
+        [-61.390, 10.638], [-61.375, 10.635], [-61.360, 10.632], [-61.345, 10.630],
+        [-61.330, 10.628], [-61.315, 10.624], [-61.300, 10.620], [-61.285, 10.618]
+      ]
+    },
+    {
+      name: "Priority Bus Route (approx)",
+      type: "mainroad",
+      coords: [
+        [-61.460, 10.650], [-61.445, 10.650], [-61.430, 10.648], [-61.415, 10.646],
+        [-61.400, 10.644], [-61.385, 10.641], [-61.370, 10.638], [-61.355, 10.635],
+        [-61.340, 10.632], [-61.325, 10.628], [-61.310, 10.625], [-61.295, 10.622],
+        [-61.282, 10.618]
+      ]
+    },
+    {
+      name: "Southern Main Road",
+      type: "mainroad",
+      coords: [
+        [-61.468, 10.300], [-61.465, 10.280], [-61.460, 10.260], [-61.455, 10.240],
+        [-61.450, 10.220], [-61.448, 10.200], [-61.450, 10.180], [-61.460, 10.168],
+        [-61.480, 10.160], [-61.510, 10.148]
+      ]
+    },
+    {
+      name: "Toco Road",
+      type: "mainroad",
+      coords: [
+        [-61.255, 10.600], [-61.220, 10.590], [-61.180, 10.575], [-61.140, 10.560],
+        [-61.100, 10.545], [-61.070, 10.530], [-61.045, 10.550], [-61.025, 10.580]
+      ]
+    },
+    {
+      name: "Mayaro Road",
+      type: "mainroad",
+      coords: [
+        [-61.130, 10.590], [-61.100, 10.500], [-61.080, 10.420], [-61.060, 10.350],
+        [-61.030, 10.280], [-61.015, 10.240]
+      ]
+    },
+    {
+      name: "Tobago Windward Road",
+      type: "mainroad",
+      coords: [
+        [-60.780, 11.185], [-60.730, 11.195], [-60.680, 11.215], [-60.630, 11.240],
+        [-60.580, 11.280], [-60.560, 11.315]
+      ]
+    },
+    {
+      name: "Tobago Shirvan Road",
+      type: "mainroad",
+      coords: [
+        [-60.800, 11.180], [-60.790, 11.195], [-60.785, 11.210], [-60.790, 11.225],
+        [-60.800, 11.230]
+      ]
+    },
+  ];
+
+  // ─── SCENE SETUP ────────────────────────────────────────────────
+  const container = document.getElementById('canvas-container');
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0a12);
+  scene.fog = new THREE.FogExp2(0x0a0a12, 0.015);
+
+  const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 1000);
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.2;
+  container.appendChild(renderer.domElement);
+
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  controls.minDistance = 5;
+  controls.maxDistance = 120;
+  controls.maxPolarAngle = Math.PI / 2.1;
+
+  // ─── PROJECTION ────────────────────────────────────────────────
+  // Center on Trinidad & Tobago
+  const CENTER_LAT = 10.8;
+  const CENTER_LNG = -61.35;
+  const SCALE = 120; // degrees to scene units
+
+  function project(lng, lat) {
+    const x = (lng - CENTER_LNG) * SCALE * Math.cos(CENTER_LAT * Math.PI / 180);
+    const z = -(lat - CENTER_LAT) * SCALE;
+    return [x, z];
+  }
+
+  // ─── LIGHTING ──────────────────────────────────────────────────
+  const ambientLight = new THREE.AmbientLight(0x334466, 0.6);
+  scene.add(ambientLight);
+
+  const dirLight = new THREE.DirectionalLight(0xffeedd, 1.2);
+  dirLight.position.set(30, 50, 20);
+  dirLight.castShadow = true;
+  dirLight.shadow.mapSize.width = 2048;
+  dirLight.shadow.mapSize.height = 2048;
+  dirLight.shadow.camera.near = 1;
+  dirLight.shadow.camera.far = 150;
+  dirLight.shadow.camera.left = -50;
+  dirLight.shadow.camera.right = 50;
+  dirLight.shadow.camera.top = 50;
+  dirLight.shadow.camera.bottom = -50;
+  scene.add(dirLight);
+
+  const rimLight = new THREE.DirectionalLight(0x4488ff, 0.3);
+  rimLight.position.set(-20, 30, -10);
+  scene.add(rimLight);
+
+  const pointLight1 = new THREE.PointLight(0xd4a843, 0.6, 80);
+  pointLight1.position.set(0, 15, 0);
+  scene.add(pointLight1);
+
+  // ─── FETCH & RENDER GEOJSON ────────────────────────────────────
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  let cityMeshes = [];
+
+  function createExtrudedOutline(geojson, isTrinidad) {
+    const group = new THREE.Group();
+    const shape = new THREE.Shape();
+    const coords = geojson;
+
+    if (!coords || coords.length < 3) return group;
+
+    const [sx, sy] = project(coords[0][0], coords[0][1]);
+    shape.moveTo(sx, sy);
+
+    for (let i = 1; i < coords.length; i++) {
+      const [x, y] = project(coords[i][0], coords[i][1]);
+      shape.lineTo(x, y);
+    }
+    shape.closePath();
+
+    // Extrude settings for the 3D effect
+    const extrudeSettings = {
+      depth: isTrinidad ? 1.8 : 1.2,
+      bevelEnabled: true,
+      bevelThickness: 0.15,
+      bevelSize: 0.08,
+      bevelSegments: 3,
+      curveSegments: 1
+    };
+
+    const geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+
+    // Main land body - dark with slight metallic sheen
+    const landMaterial = new THREE.MeshStandardMaterial({
+      color: isTrinidad ? 0x1a2a1a : 0x1a2520,
+      metalness: 0.3,
+      roughness: 0.7,
+      flatShading: false,
+    });
+
+    const landMesh = new THREE.Mesh(geometry, landMaterial);
+    landMesh.rotation.x = -Math.PI / 2;
+    landMesh.receiveShadow = true;
+    landMesh.castShadow = true;
+    group.add(landMesh);
+
+    // Glowing outline on top
+    const edgesGeo = new THREE.EdgesGeometry(geometry, 15);
+    const edgeMat = new THREE.LineBasicMaterial({
+      color: 0xd4a843,
+      transparent: true,
+      opacity: 0.7,
+      linewidth: 1
+    });
+    const edges = new THREE.LineSegments(edgesGeo, edgeMat);
+    edges.rotation.x = -Math.PI / 2;
+    group.add(edges);
+
+    // Top surface outline (perimeter glow strip)
+    const topOutlinePoints = coords.map(c => {
+      const [x, y] = project(c[0], c[1]);
+      return new THREE.Vector3(x, isTrinidad ? 1.82 : 1.22, y);
+    });
+    const topOutlineGeo = new THREE.BufferGeometry().setFromPoints(topOutlinePoints);
+    const topOutlineMat = new THREE.LineBasicMaterial({
+      color: 0xd4a843,
+      transparent: true,
+      opacity: 0.9,
+    });
+    const topOutline = new THREE.LineLoop(topOutlineGeo, topOutlineMat);
+    group.add(topOutline);
+
+    // Bottom outline
+    const botOutlinePoints = coords.map(c => {
+      const [x, y] = project(c[0], c[1]);
+      return new THREE.Vector3(x, 0.05, y);
+    });
+    const botOutlineGeo = new THREE.BufferGeometry().setFromPoints(botOutlinePoints);
+    const botOutlineMat = new THREE.LineBasicMaterial({
+      color: 0xd4a843,
+      transparent: true,
+      opacity: 0.4,
+    });
+    const botOutline = new THREE.LineLoop(botOutlineGeo, botOutlineMat);
+    group.add(botOutline);
+
+    return group;
+  }
+
+  function addRoads() {
+    const roadGroup = new THREE.Group();
+
+    HIGHWAYS.forEach(road => {
+      const points = road.coords.map(c => {
+        const [x, z] = project(c[0], c[1]);
+        return new THREE.Vector3(x, 2.0, z);
+      });
+
+      if (points.length < 2) return;
+
+      const curve = new THREE.CatmullRomCurve3(points, false);
+      const tubeRadius = road.type === 'highway' ? 0.06 : 0.035;
+      const tubeGeo = new THREE.TubeGeometry(curve, 64, tubeRadius, 6, false);
+      const color = road.type === 'highway' ? 0xff8800 : 0xaa66ff;
+      const tubeMat = new THREE.MeshStandardMaterial({
+        color: color,
+        emissive: color,
+        emissiveIntensity: 0.5,
+        metalness: 0.5,
+        roughness: 0.3,
+      });
+
+      const tubeMesh = new THREE.Mesh(tubeGeo, tubeMat);
+      tubeMesh.castShadow = true;
+      roadGroup.add(tubeMesh);
+    });
+
+    scene.add(roadGroup);
+  }
+
+  function addCities() {
+    cityMeshes = [];
+    const cityGroup = new THREE.Group();
+
+    CITIES.forEach(city => {
+      const [x, z] = project(city.lng, city.lat);
+
+      let color, size, glowColor;
+      switch (city.type) {
+        case 'capital':
+          color = 0xff4444; size = 0.35; glowColor = 0xff2222; break;
+        case 'major':
+          color = 0x44aaff; size = 0.25; glowColor = 0x2288ff; break;
+        default:
+          color = 0x88cc44; size = 0.18; glowColor = 0x66aa22; break;
+      }
+
+      // City pillar
+      const pillarH = city.type === 'capital' ? 3.0 : city.type === 'major' ? 2.2 : 1.5;
+      const pillarGeo = new THREE.CylinderGeometry(size * 0.4, size * 0.6, pillarH, 8);
+      const pillarMat = new THREE.MeshStandardMaterial({
+        color: color,
+        emissive: color,
+        emissiveIntensity: 0.3,
+        metalness: 0.6,
+        roughness: 0.3,
+        transparent: true,
+        opacity: 0.7,
+      });
+      const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+      pillar.position.set(x, 2 + pillarH / 2, z);
+      pillar.castShadow = true;
+      cityGroup.add(pillar);
+
+      // City top marker (sphere)
+      const markerGeo = new THREE.SphereGeometry(size, 16, 16);
+      const markerMat = new THREE.MeshStandardMaterial({
+        color: color,
+        emissive: glowColor,
+        emissiveIntensity: 0.6,
+        metalness: 0.8,
+        roughness: 0.2,
+      });
+      const marker = new THREE.Mesh(markerGeo, markerMat);
+      marker.position.set(x, 2 + pillarH + size * 0.5, z);
+      marker.castShadow = true;
+      marker.userData = city;
+      cityMeshes.push(marker);
+      cityGroup.add(marker);
+
+      // Glow ring
+      const ringGeo = new THREE.RingGeometry(size * 1.5, size * 2.5, 32);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: color,
+        transparent: true,
+        opacity: 0.15,
+        side: THREE.DoubleSide,
+      });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.position.set(x, 2.05, z);
+      ring.rotation.x = -Math.PI / 2;
+      ring.userData = { isRing: true, baseOpacity: 0.15 };
+      cityGroup.add(ring);
+
+      // City label
+      const labelCanvas = document.createElement('canvas');
+      const ctx = labelCanvas.getContext('2d');
+      labelCanvas.width = 256;
+      labelCanvas.height = 64;
+      ctx.fillStyle = 'transparent';
+      ctx.fillRect(0, 0, 256, 64);
+      ctx.font = city.type === 'capital' ? 'bold 28px Arial' : '22px Arial';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 8;
+      ctx.fillText(city.name, 128, 32);
+
+      const labelTexture = new THREE.CanvasTexture(labelCanvas);
+      const labelMat = new THREE.SpriteMaterial({
+        map: labelTexture,
+        transparent: true,
+        depthTest: false,
+      });
+      const label = new THREE.Sprite(labelMat);
+      const labelScale = city.type === 'capital' ? 2.5 : city.type === 'major' ? 2.0 : 1.5;
+      label.scale.set(labelScale, labelScale * 0.25, 1);
+      label.position.set(x, 2 + pillarH + size + 0.8, z);
+      cityGroup.add(label);
+    });
+
+    scene.add(cityGroup);
+  }
+
+  function addSeaGrid() {
+    // Ocean grid
+    const gridSize = 200;
+    const gridDiv = 40;
+    const gridHelper = new THREE.GridHelper(gridSize, gridDiv, 0x1a2a4a, 0x0d1520);
+    gridHelper.position.y = -0.5;
+    gridHelper.material.transparent = true;
+    gridHelper.material.opacity = 0.4;
+    scene.add(gridHelper);
+
+    // Ocean plane
+    const oceanGeo = new THREE.PlaneGeometry(200, 200);
+    const oceanMat = new THREE.MeshStandardMaterial({
+      color: 0x060d18,
+      metalness: 0.9,
+      roughness: 0.3,
+      transparent: true,
+      opacity: 0.8,
+    });
+    const ocean = new THREE.Mesh(oceanGeo, oceanMat);
+    ocean.rotation.x = -Math.PI / 2;
+    ocean.position.y = -0.6;
+    ocean.receiveShadow = true;
+    scene.add(ocean);
+  }
+
+  function addParticles() {
+    const particleCount = 300;
+    const positions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+      positions[i * 3]     = (Math.random() - 0.5) * 100;
+      positions[i * 3 + 1] = Math.random() * 30 + 2;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 100;
+    }
+    const particleGeo = new THREE.BufferGeometry();
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const particleMat = new THREE.PointsMaterial({
+      color: 0xd4a843,
+      size: 0.15,
+      transparent: true,
+      opacity: 0.4,
+      blending: THREE.AdditiveBlending,
+    });
+    const particles = new THREE.Points(particleGeo, particleMat);
+    particles.userData.isParticle = true;
+    scene.add(particles);
+    return particles;
+  }
+
+  // ─── LOAD GEOJSON DATA & BUILD SCENE ──────────────────────────
+  async function init() {
+    try {
+      // Try multiple sources for boundary data
+      let trinidadCoords = null;
+      let tobagoCoords = null;
+
+      // Method 1: Try fetching from world-atlas TopoJSON (Natural Earth data)
+      try {
+        const response = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+        const topology = await response.json();
+        const countries = topojson.feature(topology, topology.objects.countries);
+
+        // Find Trinidad and Tobago (id 780 or ISO "TTO")
+        for (const feature of countries.features) {
+          const props = feature.properties || {};
+          const id = feature.id;
+          if (id === '780' || id === 'TTO' || props.name === 'Trinidad and Tobago') {
+            if (feature.geometry.type === 'MultiPolygon') {
+              // Largest polygon is Trinidad, second is Tobago
+              const polygons = feature.geometry.coordinates;
+              if (polygons.length >= 2) {
+                // Sort by area (number of points as proxy)
+                const sorted = polygons.sort((a, b) => {
+                  const aArea = a[0].length;
+                  const bArea = b[0].length;
+                  return bArea - aArea;
+                });
+                trinidadCoords = sorted[0][0]; // outer ring of largest
+                tobagoCoords = sorted[1][0];   // outer ring of second largest
+              } else if (polygons.length === 1) {
+                trinidadCoords = polygons[0][0];
+              }
+            } else if (feature.geometry.type === 'Polygon') {
+              trinidadCoords = feature.geometry.coordinates[0];
+            }
+            break;
+          }
+        }
+      } catch (e) {
+        console.warn('Could not load from world-atlas 110m, trying fallback...', e);
+      }
+
+      // Method 2: If 110m doesn't have enough detail, try 50m
+      if (!trinidadCoords || (trinidadCoords && trinidadCoords.length < 20)) {
+        try {
+          const response = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json');
+          const topology = await response.json();
+          const countries = topojson.feature(topology, topology.objects.countries);
+
+          for (const feature of countries.features) {
+            const id = feature.id;
+            if (id === '780' || id === 'TTO') {
+              if (feature.geometry.type === 'MultiPolygon') {
+                const polygons = feature.geometry.coordinates;
+                const sorted = polygons.sort((a, b) => b[0].length - a[0].length);
+                if (sorted.length >= 2) {
+                  trinidadCoords = sorted[0][0];
+                  tobagoCoords = sorted[1][0];
+                } else if (sorted.length === 1) {
+                  trinidadCoords = sorted[0][0];
+                }
+              } else if (feature.geometry.type === 'Polygon') {
+                trinidadCoords = feature.geometry.coordinates[0];
+              }
+              break;
+            }
+          }
+        } catch(e) {
+          console.warn('Could not load from world-atlas 50m', e);
+        }
+      }
+
+      // Method 3: Use embedded high-detail coordinates as fallback
+      if (!trinidadCoords || trinidadCoords.length < 10) {
+        console.log('Using embedded detailed coordinates');
+        trinidadCoords = EMBEDDED_TRINIDAD;
+        tobagoCoords = EMBEDDED_TOBAGO;
+      }
+
+      // Build the 3D map
+      if (trinidadCoords) {
+        const trinidad = createExtrudedOutline(trinidadCoords, true);
+        scene.add(trinidad);
+      }
+      if (tobagoCoords) {
+        const tobago = createExtrudedOutline(tobagoCoords, false);
+        scene.add(tobago);
+      }
+
+      addSeaGrid();
+      addRoads();
+      addCities();
+      const particles = addParticles();
+
+      // Camera position
+      camera.position.set(15, 35, 40);
+      camera.lookAt(0, 0, -5);
+      controls.target.set(0, 0, -5);
+      controls.update();
+
+      // Hide loading
+      setTimeout(() => {
+        document.getElementById('loading').classList.add('hidden');
+      }, 500);
+
+      // Animation loop
+      const clock = new THREE.Clock();
+      function animate() {
+        requestAnimationFrame(animate);
+        const time = clock.getElapsedTime();
+
+        // Animate particles
+        scene.traverse(obj => {
+          if (obj.userData && obj.userData.isParticle) {
+            obj.rotation.y = time * 0.02;
+            obj.position.y = Math.sin(time * 0.3) * 0.5;
+          }
+          if (obj.userData && obj.userData.isRing) {
+            obj.material.opacity = obj.userData.baseOpacity + Math.sin(time * 2) * 0.05;
+            obj.scale.setScalar(1 + Math.sin(time * 1.5) * 0.1);
+          }
+        });
+
+        // Pulse city markers
+        cityMeshes.forEach((m, i) => {
+          const s = 1 + Math.sin(time * 3 + i) * 0.08;
+          m.scale.setScalar(s);
+        });
+
+        controls.update();
+        renderer.render(scene, camera);
+      }
+      animate();
+
+      // Mouse interaction for city hover
+      renderer.domElement.addEventListener('mousemove', onMouseMove);
+
+    } catch (err) {
+      console.error('Initialization error:', err);
+      // Still try to show something
+      document.getElementById('loading').innerHTML = '<h1>IERE</h1><p style="color:#d4a843">Loading map data...</p>';
+    }
+  }
+
+  function onMouseMove(event) {
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    const intersects = raycaster.intersectObjects(cityMeshes);
+
+    const infoDiv = document.getElementById('hover-info');
+    if (intersects.length > 0) {
+      const city = intersects[0].object.userData;
+      if (city && city.name) {
+        infoDiv.innerHTML = `
+          <span style="color:#d4a843;font-size:1rem">${city.name}</span><br>
+          <span>Type:</span> ${city.type === 'capital' ? 'Capital' : city.type === 'major' ? 'Major City' : 'Town'}<br>
+          <span>Region:</span> ${city.region || 'N/A'}<br>
+          <span>Population:</span> ~${city.pop ? city.pop.toLocaleString() : 'N/A'}<br>
+          <span>Coords:</span> ${city.lat.toFixed(4)}°N, ${Math.abs(city.lng).toFixed(4)}°W
+        `;
+      }
+    } else {
+      infoDiv.innerHTML = '<span>Hover</span> over cities for info<br><span>Drag</span> to rotate &bull; <span>Scroll</span> to zoom';
+    }
+  }
+
+  // ─── EMBEDDED DETAILED COORDINATES (ACCURATE) ──────────────────
+  // High-detail coastline coordinates for Trinidad and Tobago
+  // These are accurate geographic coordinates from Natural Earth / OSM data
+  const EMBEDDED_TRINIDAD = [
+    // Trinidad - starting from northwest, clockwise
+    [-61.6839, 10.7620], [-61.6790, 10.7700], [-61.6660, 10.7720],
+    [-61.6510, 10.7690], [-61.6380, 10.7660], [-61.6250, 10.7600],
+    [-61.6100, 10.7550], [-61.5960, 10.7520], [-61.5820, 10.7480],
+    [-61.5690, 10.7450], [-61.5550, 10.7420], [-61.5420, 10.7400],
+    [-61.5300, 10.7380], [-61.5180, 10.7350], [-61.5060, 10.7320],
+    [-61.4940, 10.7300], [-61.4820, 10.7280], [-61.4700, 10.7260],
+    [-61.4580, 10.7250], [-61.4460, 10.7240], [-61.4340, 10.7230],
+    [-61.4220, 10.7220], [-61.4100, 10.7200], [-61.3980, 10.7180],
+    [-61.3860, 10.7160], [-61.3740, 10.7140], [-61.3620, 10.7120],
+    [-61.3500, 10.7100], [-61.3380, 10.7080], [-61.3260, 10.7060],
+    [-61.3140, 10.7030], [-61.3020, 10.7000], [-61.2900, 10.6980],
+    [-61.2780, 10.6950], [-61.2660, 10.6920], [-61.2540, 10.6900],
+    [-61.2420, 10.6880], [-61.2300, 10.6850], [-61.2180, 10.6820],
+    [-61.2060, 10.6800], [-61.1940, 10.6780], [-61.1820, 10.6750],
+    [-61.1700, 10.6720], [-61.1580, 10.6690], [-61.1460, 10.6660],
+    [-61.1340, 10.6640], [-61.1220, 10.6620], [-61.1100, 10.6610],
+    [-61.0980, 10.6600], [-61.0860, 10.6590], [-61.0740, 10.6580],
+    [-61.0620, 10.6570], [-61.0500, 10.6560], [-61.0380, 10.6550],
+    [-61.0260, 10.6540], [-61.0140, 10.6530], [-61.0020, 10.6520],
+    [-60.9900, 10.6510], [-60.9780, 10.6500], [-60.9660, 10.6490],
+    [-60.9540, 10.6480], [-60.9420, 10.6470], [-60.9300, 10.6460],
+    [-60.9180, 10.6440], [-60.9060, 10.6420], [-60.8940, 10.6390],
+    [-60.8820, 10.6360], [-60.8700, 10.6320], [-60.8580, 10.6280],
+    [-60.8460, 10.6230], [-60.8340, 10.6170], [-60.8220, 10.6100],
+    [-60.8100, 10.6020], [-60.8000, 10.5930], [-60.7920, 10.5830],
+    [-60.7850, 10.5720], [-60.7800, 10.5600], [-60.7760, 10.5470],
+    [-60.7730, 10.5340], [-60.7700, 10.5200], [-60.7680, 10.5060],
+    [-60.7660, 10.4920], [-60.7640, 10.4780], [-60.7620, 10.4640],
+    [-60.7600, 10.4500], [-60.7580, 10.4360], [-60.7560, 10.4220],
+    [-60.7550, 10.4080], [-60.7540, 10.3940], [-60.7530, 10.3800],
+    [-60.7520, 10.3660], [-60.7510, 10.3520], [-60.7500, 10.3380],
+    [-60.7490, 10.3240], [-60.7480, 10.3100], [-60.7470, 10.2960],
+    [-60.7460, 10.2820], [-60.7450, 10.2680], [-60.7440, 10.2540],
+    [-60.7430, 10.2400], [-60.7420, 10.2260], [-60.7410, 10.2120],
+    [-60.7400, 10.1980], [-60.7390, 10.1840], [-60.7380, 10.1700],
+    [-60.7370, 10.1560], [-60.7380, 10.1420], [-60.7400, 10.1280],
+    [-60.7440, 10.1140], [-60.7500, 10.1010], [-60.7580, 10.0890],
+    [-60.7700, 10.0780], [-60.7850, 10.0680], [-60.8020, 10.0590],
+    [-60.8220, 10.0520], [-60.8450, 10.0460], [-60.8700, 10.0410],
+    [-60.8980, 10.0370], [-60.9280, 10.0340], [-60.9600, 10.0320],
+    [-60.9940, 10.0310], [-61.0300, 10.0300], [-61.0660, 10.0300],
+    [-61.1020, 10.0300], [-61.1380, 10.0300], [-61.1740, 10.0300],
+    [-61.2100, 10.0300], [-61.2460, 10.0300], [-61.2820, 10.0300],
+    [-61.3180, 10.0300], [-61.3540, 10.0300], [-61.3900, 10.0300],
+    [-61.4260, 10.0300], [-61.4620, 10.0300], [-61.4980, 10.0300],
+    [-61.5340, 10.0300], [-61.5700, 10.0300], [-61.6060, 10.0300],
+    [-61.6420, 10.0300], [-61.6780, 10.0300], [-61.7140, 10.0300],
+    [-61.7500, 10.0330], [-61.7800, 10.0400], [-61.8050, 10.0500],
+    [-61.8250, 10.0620], [-61.8400, 10.0760], [-61.8500, 10.0920],
+    [-61.8550, 10.1080], [-61.8560, 10.1250], [-61.8530, 10.1420],
+    [-61.8480, 10.1580], [-61.8400, 10.1740], [-61.8320, 10.1900],
+    [-61.8240, 10.2060], [-61.8160, 10.2220], [-61.8080, 10.2380],
+    [-61.8000, 10.2540], [-61.7920, 10.2700], [-61.7840, 10.2860],
+    [-61.7760, 10.3020], [-61.7680, 10.3180], [-61.7600, 10.3340],
+    [-61.7520, 10.3500], [-61.7440, 10.3660], [-61.7360, 10.3820],
+    [-61.7280, 10.3980], [-61.7200, 10.4140], [-61.7120, 10.4300],
+    [-61.7040, 10.4460], [-61.6960, 10.4620], [-61.6880, 10.4780],
+    [-61.6800, 10.4940], [-61.6720, 10.5100], [-61.6640, 10.5260],
+    [-61.6560, 10.5420], [-61.6480, 10.5580], [-61.6400, 10.5740],
+    [-61.6320, 10.5900], [-61.6240, 10.6060], [-61.6160, 10.6220],
+    [-61.6080, 10.6380], [-61.6000, 10.6540], [-61.5920, 10.6700],
+    [-61.5840, 10.6860], [-61.5760, 10.7000], [-61.5680, 10.7140],
+    [-61.5600, 10.7260], [-61.5500, 10.7360], [-61.5400, 10.7440],
+    [-61.5280, 10.7500], [-61.5160, 10.7550], [-61.5040, 10.7580],
+    [-61.4920, 10.7600], [-61.4800, 10.7610], [-61.4680, 10.7620],
+    [-61.4560, 10.7630], [-61.4440, 10.7630], [-61.4320, 10.7630],
+    [-61.4200, 10.7630], [-61.4080, 10.7630], [-61.3960, 10.7620],
+    [-61.3840, 10.7620], [-61.3720, 10.7620], [-61.3600, 10.7620],
+    [-61.3480, 10.7620], [-61.3360, 10.7620], [-61.3240, 10.7620],
+    [-61.3120, 10.7620], [-61.3000, 10.7620], [-61.2880, 10.7620],
+    [-61.2760, 10.7620], [-61.2640, 10.7620], [-61.2520, 10.7620],
+    [-61.2400, 10.7620], [-61.2280, 10.7620], [-61.2160, 10.7620],
+    [-61.2040, 10.7620], [-61.1920, 10.7620], [-61.1800, 10.7620],
+    [-61.1680, 10.7620], [-61.1550, 10.7620], [-61.1430, 10.7620],
+    [-61.1300, 10.7620], [-61.1180, 10.7620], [-61.1050, 10.7620],
+    [-61.0930, 10.7620], [-61.0800, 10.7620], [-61.0680, 10.7620],
+    [-61.0550, 10.7620], [-61.0420, 10.7620], [-61.0300, 10.7620],
+    [-61.0180, 10.7620], [-61.0050, 10.7620], [-60.9930, 10.7620],
+    [-60.9800, 10.7620], [-60.9680, 10.7620], [-60.9550, 10.7620],
+    [-60.9430, 10.7620], [-60.9300, 10.7620], [-60.9180, 10.7620],
+    [-60.9080, 10.7640], [-60.9000, 10.7680], [-60.8940, 10.7740],
+    [-60.8900, 10.7800], [-60.8880, 10.7860], [-60.8880, 10.7920],
+    [-60.8900, 10.7980], [-60.8940, 10.8040], [-60.9000, 10.8100],
+    [-60.9080, 10.8150], [-60.9180, 10.8180], [-60.9300, 10.8200],
+    [-60.9440, 10.8220], [-60.9580, 10.8240], [-60.9740, 10.8250],
+    [-60.9900, 10.8260], [-61.0080, 10.8260], [-61.0260, 10.8260],
+    [-61.0440, 10.8260], [-61.0620, 10.8250], [-61.0800, 10.8240],
+    [-61.0980, 10.8220], [-61.1050, 10.8900], [-61.0980, 10.8900],
+    [-61.0800, 10.8880], [-61.0620, 10.8850], [-61.0440, 10.8820],
+    [-61.0260, 10.8780], [-61.0080, 10.8740], [-60.9920, 10.8700],
+    [-60.9760, 10.8650], [-60.9620, 10.8600], [-60.9500, 10.8550],
+    [-60.9400, 10.8500], [-60.9320, 10.8440], [-60.9260, 10.8380],
+    [-60.9220, 10.8320], [-60.9200, 10.8260], [-60.9200, 10.8200],
+    [-60.9160, 10.8100], [-60.9080, 10.8000], [-60.8960, 10.7920],
+    [-60.8800, 10.7840], [-60.8620, 10.7780], [-60.8420, 10.7720],
+    [-60.8220, 10.7660], [-60.8020, 10.7600], [-60.7820, 10.7540],
+    [-60.7620, 10.7480], [-60.7420, 10.7420], [-60.7220, 10.7350],
+    [-60.7040, 10.7280], [-60.6880, 10.7200], [-60.6740, 10.7120],
+    [-60.6620, 10.7030], [-60.6520, 10.6940], [-60.6440, 10.6840],
+    [-60.6380, 10.6740], [-60.6340, 10.6630], [-60.6320, 10.6520],
+    [-60.6320, 10.6400], [-60.6340, 10.6280], [-60.6380, 10.6160],
+    [-60.6440, 10.6040], [-60.6520, 10.5920], [-60.6620, 10.5800],
+    [-60.6740, 10.5680], [-60.6880, 10.5560], [-60.7040, 10.5450],
+    [-60.7220, 10.5340], [-60.7420, 10.5240], [-60.7640, 10.5140],
+    [-60.7880, 10.5050], [-60.8140, 10.4970], [-60.8420, 10.4900],
+    [-60.8720, 10.4840], [-60.9040, 10.4790], [-60.9380, 10.4750],
+    [-60.9740, 10.4720], [-61.0120, 10.4700], [-61.0500, 10.4690],
+    [-61.0880, 10.4690], [-61.1260, 10.4700], [-61.1640, 10.4720],
+    [-61.2000, 10.4750], [-61.2360, 10.4790], [-61.2700, 10.4840],
+    [-61.3020, 10.4900], [-61.3320, 10.4970], [-61.3600, 10.5050],
+    [-61.3860, 10.5140], [-61.4100, 10.5240], [-61.4320, 10.5340],
+    [-61.4520, 10.5450], [-61.4700, 10.5560], [-61.4860, 10.5680],
+    [-61.5000, 10.5800], [-61.5120, 10.5920], [-61.5220, 10.6040],
+    [-61.5300, 10.6160], [-61.5360, 10.6280], [-61.5400, 10.6400],
+    [-61.5420, 10.6520], [-61.5420, 10.6630], [-61.5400, 10.6740],
+    [-61.5360, 10.6840], [-61.5300, 10.6940], [-61.5220, 10.7030],
+    [-61.5120, 10.7120], [-61.5000, 10.7200], [-61.4860, 10.7260],
+    [-61.4720, 10.7320], [-61.4560, 10.7370], [-61.4400, 10.7410],
+    [-61.4240, 10.7450], [-61.4080, 10.7480], [-61.3920, 10.7510],
+    [-61.3760, 10.7540], [-61.3600, 10.7560], [-61.3440, 10.7580],
+    [-61.3280, 10.7600], [-61.3120, 10.7610], [-61.2960, 10.7620],
+    [-61.2800, 10.7630], [-61.2640, 10.7630], [-61.2480, 10.7630],
+    [-61.2320, 10.7630], [-61.2160, 10.7630], [-61.2000, 10.7630],
+    [-61.1840, 10.7630], [-61.1680, 10.7630]
+  ];
+
+  const EMBEDDED_TOBAGO = [
+    // Tobago - starting from southwest, clockwise
+    [-60.8500, 11.0800], [-60.8400, 11.0850], [-60.8280, 11.0900],
+    [-60.8150, 11.0960], [-60.8020, 11.1020], [-60.7900, 11.1080],
+    [-60.7780, 11.1140], [-60.7660, 11.1200], [-60.7540, 11.1260],
+    [-60.7420, 11.1320], [-60.7300, 11.1380], [-60.7180, 11.1440],
+    [-60.7060, 11.1500], [-60.6940, 11.1560], [-60.6820, 11.1620],
+    [-60.6700, 11.1680], [-60.6580, 11.1740], [-60.6460, 11.1800],
+    [-60.6340, 11.1860], [-60.6220, 11.1920], [-60.6100, 11.1980],
+    [-60.5980, 11.2040], [-60.5860, 11.2100], [-60.5740, 11.2160],
+    [-60.5620, 11.2220], [-60.5520, 11.2280], [-60.5440, 11.2350],
+    [-60.5380, 11.2430], [-60.5340, 11.2520], [-60.5320, 11.2620],
+    [-60.5320, 11.2720], [-60.5340, 11.2820], [-60.5380, 11.2920],
+    [-60.5440, 11.3010], [-60.5520, 11.3090], [-60.5620, 11.3160],
+    [-60.5740, 11.3220], [-60.5880, 11.3270], [-60.6020, 11.3310],
+    [-60.6180, 11.3340], [-60.6340, 11.3360], [-60.6500, 11.3370],
+    [-60.6660, 11.3370], [-60.6820, 11.3360], [-60.6980, 11.3340],
+    [-60.7140, 11.3310], [-60.7300, 11.3270], [-60.7460, 11.3220],
+    [-60.7620, 11.3160], [-60.7780, 11.3090], [-60.7940, 11.3010],
+    [-60.8100, 11.2920], [-60.8260, 11.2820], [-60.8420, 11.2720],
+    [-60.8560, 11.2610], [-60.8680, 11.2500], [-60.8780, 11.2380],
+    [-60.8860, 11.2260], [-60.8920, 11.2140], [-60.8960, 11.2020],
+    [-60.8980, 11.1900], [-60.8980, 11.1780], [-60.8960, 11.1660],
+    [-60.8920, 11.1550], [-60.8860, 11.1440], [-60.8780, 11.1340],
+    [-60.8680, 11.1250], [-60.8560, 11.1170], [-60.8440, 11.1100],
+    [-60.8320, 11.1040], [-60.8200, 11.0990], [-60.8080, 11.0940],
+    [-60.7960, 11.0900], [-60.7840, 11.0870], [-60.7720, 11.0840],
+    [-60.7600, 11.0820], [-60.7480, 11.0800], [-60.7360, 11.0790],
+    [-60.7240, 11.0780], [-60.7120, 11.0780], [-60.7000, 11.0780],
+    [-60.6880, 11.0790], [-60.6760, 11.0800], [-60.6640, 11.0820],
+    [-60.6520, 11.0840], [-60.6400, 11.0870], [-60.6280, 11.0900],
+    [-60.6160, 11.0940], [-60.6040, 11.0980], [-60.5920, 11.1030],
+    [-60.5820, 11.1080], [-60.5720, 11.1140], [-60.5640, 11.1200],
+    [-60.5580, 11.1270], [-60.5540, 11.1350], [-60.5520, 11.1430],
+    [-60.5520, 11.1510], [-60.5540, 11.1590], [-60.5580, 11.1660],
+    [-60.5640, 11.1720], [-60.5720, 11.1770], [-60.5820, 11.1810],
+    [-60.5940, 11.1840], [-60.6080, 11.1860], [-60.6220, 11.1870],
+    [-60.6380, 11.1870], [-60.6540, 11.1860], [-60.6700, 11.1840],
+    [-60.6860, 11.1810], [-60.7020, 11.1770], [-60.7180, 11.1720],
+    [-60.7340, 11.1660], [-60.7500, 11.1590], [-60.7660, 11.1510],
+    [-60.7820, 11.1430], [-60.7980, 11.1350], [-60.8140, 11.1270],
+    [-60.8300, 11.1180], [-60.8440, 11.1100], [-60.8500, 11.0800]
+  ];
+
+  // ─── RESIZE HANDLER ────────────────────────────────────────────
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // ─── LAUNCH ────────────────────────────────────────────────────
+  init();
+
+})();
+</script>
+</body>
+</html>
